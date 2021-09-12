@@ -3,6 +3,7 @@
 //
 
 #pragma once
+
 #include <functional>
 #include <iostream>
 #include "Epoller.h"
@@ -12,8 +13,9 @@ private:
     Event(int fd, Epoller *epoller) : fd_(fd),
                                       events_(0), revents_(0), epoller_(epoller) {
     }
+
 public:
-    static std::shared_ptr<Event> make(int fd, Epoller* epoller) {
+    static std::shared_ptr<Event> make(int fd, Epoller *epoller) {
         auto event = std::shared_ptr<Event>(new Event(fd, epoller));
         assert(event);
         epoller->addEvent(event);
@@ -78,18 +80,24 @@ public:
 
     void handle() {
         // todo events的情况判断是否要再完善？同见setReadable...
-        if ((revents_ & EPOLLERR) && errorCallback_)
+        if ((revents_ & EPOLLERR) && errorCallback_) {
             errorCallback_();
-        else if ((revents_ & EPOLLIN || revents_ & EPOLLPRI) && readCallback_)
-            readCallback_();
-        else if ((revents_ & EPOLLOUT) && writeCallback_)
-            writeCallback_();
-        else if ((revents_ & EPOLLHUP) && closeCallback_)
-            closeCallback_();
-        else {
-            std::cout << "revents: " << revents_ << std::endl;
-            assert(0);
+            return;
         }
+        if ((revents_ & EPOLLIN || revents_ & EPOLLPRI) && readCallback_) {
+            readCallback_();
+            return;
+        }
+        if ((revents_ & EPOLLOUT) && writeCallback_) {
+            writeCallback_();
+            return;
+        }
+        if ((revents_ & EPOLLHUP) && closeCallback_) {
+            closeCallback_();
+            return;
+        }
+        std::cout << "revents: " << revents_ << std::endl;
+        assert(0);
     }
 
 private:

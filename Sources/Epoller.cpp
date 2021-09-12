@@ -2,10 +2,11 @@
 // Created by Hello Peter on 2021/9/8.
 //
 
-#include "Epoller.h"
-#include "Event.h"
+#include "../Epoller.h"
+#include "../Event.h"
 #include <iostream>
 #include <unistd.h>
+#include <cstring>
 
 using namespace std;
 
@@ -59,12 +60,18 @@ void Epoller::removeEvent(int fd) {
     eventList.erase(fd);
 }
 
-
 std::vector<std::shared_ptr<Event>> Epoller::poll(int timeout) {
     std::vector<std::shared_ptr<Event>> res;
     int ret = epoll_wait(epollfd_, evlist, MAX_EVENTS, timeout);
-    if (ret < 0)
+    if (ret < 0) {
+        cout << strerror(errno) << endl;
         assert(0);
+    }
+    {
+        for (auto& x : evlist) {
+            cout << "epoll_wait ret: " << x.data.fd << endl;
+        }
+    }
     for (int i = 0; i < ret; i++) {
         auto iter = eventList.find(evlist[i].data.fd);
         assert(iter != eventList.end());
