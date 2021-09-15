@@ -3,6 +3,7 @@
 //
 
 #pragma once
+
 #include <vector>
 #include <iostream>
 #include <cstring>
@@ -36,7 +37,7 @@ public:
     }
 
     // 当socket可读时，socket->buffer(writable)
-    ssize_t readFromSocket(Socket& s, size_t maxBytes = 4096) {
+    ssize_t readFromSocket(Socket &s, size_t maxBytes = 4096) {
         int connfd = s.fd();
         if (writableBytes() < maxBytes) {
             if (discardableBytes() >= maxBytes) {
@@ -60,7 +61,7 @@ public:
     // 当socket可写时，buffer(readable)->socket
     ssize_t writeToSocket(Socket &s, size_t maxBytes = 4096) {
         int connfd = s.fd();
-    // clog << "test1: " << std::min(readableBytes(), maxBytes) << "&" << std::string(peek(), std::min(readableBytes(), maxBytes));
+        // clog << "test1: " << std::min(readableBytes(), maxBytes) << "&" << std::string(peek(), std::min(readableBytes(), maxBytes));
         int n = ::write(connfd, peek(), std::min(readableBytes(), maxBytes));
         assert(n >= 0 && n <= maxBytes);
         writeIndex_ += n;
@@ -101,9 +102,9 @@ public:
         return retrieve(readableBytes());
     }
 
-    const char *findStr(const char* str) const {
+    const char *findStr(const char *str) const {
         // 想用strstr，但是无法指定长度，故使用memmem
-        return (const char*)memmem(peek(), readableBytes(), str, strlen(str));
+        return (const char *) memmem(peek(), readableBytes(), str, strlen(str));
     }
 
 private:

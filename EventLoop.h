@@ -24,12 +24,13 @@ public:
     void start() {
         while (looping_) {
             auto ret = epoller_.poll();
-            for (auto& event : ret)
+            for (auto &event : ret)
                 event->handle();
         }
     }
 
-    Epoller* epoller() {
+
+    Epoller *epoller() {
         return &epoller_;
     }
 
@@ -37,6 +38,7 @@ public:
         looping_ = false;
         // do sth...
     }
+
 private:
     Epoller epoller_; // 生命期要长于所有的Event
     bool looping_;

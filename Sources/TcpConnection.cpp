@@ -7,8 +7,9 @@
 
 
 TcpConnection::TcpConnection(Socket socket, TcpServer *tcpServer, EventLoop *loop) : socket_(std::move(socket)),
-                                                                    state_(BLANK), isWillClose(false),
-                                                                    tcpServer_(tcpServer), loop_(loop) {}
+                                                                                     state_(BLANK), isWillClose(false),
+                                                                                     tcpServer_(tcpServer),
+                                                                                     loop_(loop) {}
 
 void TcpConnection::sendNonblock() {
     // user -> buffer(writable)

@@ -3,6 +3,7 @@
 //
 
 #pragma once
+
 #include <iostream>
 #include <string>
 #include <set>
@@ -20,6 +21,7 @@
 class Timer {
 public:
     using callbackType = std::function<void(any)>;
+
     Timer(callbackType callback, uint64_t expirationTime, uint64_t intervalTime, any data)
             : callback_(callback), expirationTime_(expirationTime), intervalTime_(intervalTime), data_(data) {
         id_ = ++nextId_;

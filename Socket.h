@@ -2,6 +2,7 @@
 // Created by Hello Peter on 2021/9/7.
 //
 #pragma once
+
 #include <unistd.h>
 #include <algorithm>
 #include <sys/socket.h>
@@ -14,8 +15,9 @@ class InAddr;
 class Socket {
 private:
     Socket(int sockfd) : sockfd_(sockfd) {}
+
 public:
-    static Socket make(int family = AF_INET, int type = SOCK_STREAM, int protocol = 0) {
+    static Socket makeListened(int family = AF_INET, int type = SOCK_STREAM, int protocol = 0) {
         int sockfd = ::socket(family, type, protocol);
         if (sockfd == -1)
             assert(0);
@@ -44,11 +46,11 @@ public:
 
     InAddr peerInAddr();
 
-    void bindAddr(const InAddr& localAddr);
+    void bindAddr(const InAddr &localAddr);
 
     void listen(int backlog);
 
-    int accept(InAddr& peerAddr);
+    int accept(InAddr &peerAddr);
 
     int accept();
 

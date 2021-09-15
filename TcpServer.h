@@ -16,11 +16,13 @@
 // 单线程TcpServer
 class TcpServer {
     friend class TcpConnection;
+
 public:
     // 在使用 右值变量时还是 当成左值来用（只要有名字就是左值）.
     // 此处可用Socket或Socket&&来接受右值.
     // C++ Primer P478: 因为listenfd 是一个非引用参数，所以对它进行拷贝初始化 -> 左值使用拷贝构造函数，右值使用移动构造函数
-    TcpServer(Socket listenfd, InAddr addr, EventLoop* loop) : listenfd_(std::move(listenfd)), loop_(loop), pool_(loop) {
+    TcpServer(Socket listenfd, InAddr addr, EventLoop *loop) : listenfd_(std::move(listenfd)), loop_(loop),
+                                                               pool_(loop) {
         listenfd_.setReuseAddr();
         listenfd_.bindAddr(addr);
 
@@ -32,22 +34,22 @@ public:
         event->setReadable(true);
     }
 
-    void setConnMsgCallback(std::function<void(TcpConnection&)> callback) {
+    void setConnMsgCallback(std::function<void(TcpConnection &)> callback) {
         connMsgCallback_ = callback;
     }
 
-    void setConnEstaCallback(std::function<void(TcpConnection&)> callback) {
+    void setConnEstaCallback(std::function<void(TcpConnection &)> callback) {
         connEstaCallback_ = callback;
     }
 
-    void setConnCloseCallback(std::function<void(TcpConnection&)> callback) {
+    void setConnCloseCallback(std::function<void(TcpConnection &)> callback) {
         connCloseCallback_ = callback;
     }
 
     // 启动EventLoop，开始监听listenfd和其他事件
     void start(size_t nums = 0) {
         listenfd_.listen(4000);
-        // fixme pool_.setHelperThreadsNumAndStart() 必须先于 loop_->start()
+        // note pool_.setHelperThreadsNumAndStart() 必须先于 loop_->start()
         pool_.setHelperThreadsNumAndStart(nums);
         loop_->start();
     }
@@ -56,13 +58,12 @@ private:
     // for connfd
     // socket -> buffer(writable)
     // buffer(readable) -> user
-    void preConnMsgCallback(TcpConnection& connection) {
-        // 本函数应该做：读取socket上数据到buffer，如果为0调用destroy()函数释放连接资源
+    void preConnMsgCallback(TcpConnection &connection) {
+        // 本函数应该：读取socket上数据到buffer，如果为0调用destroy()函数释放连接资源
         // 否则将buffer等作为参数，回调用户的readCallback.
         ssize_t n = connection.readBuffer().readFromSocket(connection.socket());
         if (n == 0) {
             // eof
-            // 名不副实，此处其实是被动关闭
             closeConnection(connection);
             return;
         }
@@ -71,22 +72,23 @@ private:
 
     // for listenfd_
     void acceptCallback() {
-        std::cout << "acceptCallback()::accept occur!" << std::endl;
         int connfd = ::accept(listenfd_.fd(), nullptr, nullptr);
-        auto eventLoop = pool_.getNextPool();
-        std::cout << "when accept, address of eventLoop: " << eventLoop << std::endl;
-        auto connEvent = Event::make(connfd, eventLoop->epoller());
+        auto ownerEventLoop = pool_.getNextPool();
+        std::cout << "when accept, address of eventLoop: " << ownerEventLoop << ", and the new connfd: " << connfd
+                  << std::endl;
+        auto connEvent = Event::make(connfd, ownerEventLoop->epoller());
 
-        // fixme 无法声明默认的析构函数，否则会引起TcpServer::readCallback()函数中的connections.insert插入错误！
-        std::pair<int, TcpConnection> apair(connfd, TcpConnection::make(connfd, this, eventLoop));
+        std::pair<int, TcpConnection> apair(connfd, TcpConnection::make(connfd, this, ownerEventLoop));
 
         std::unique_lock<std::mutex> ul(conns_mutex_);
         auto ret = connections_.insert(std::move(apair));
         ul.unlock();
 
         assert(ret.second);
-        auto& newConn = ret.first->second;
+        auto &newConn = ret.first->second;
+        std::cout << "newConn: " << &newConn << std::endl;
         auto bindCallback = [this, &newConn]() {
+            std::cout << "callback newConn: " << &newConn << std::endl;
             this->preConnMsgCallback(newConn);
         };
         connEvent->setReadCallback(bindCallback);
@@ -95,7 +97,7 @@ private:
         connEstaCallback_(newConn);
     }
 
-    void closeConnection(TcpConnection& connection) {
+    void closeConnection(TcpConnection &connection) {
         // fixed: 确保数据被发送
         // todo 使用正确的EventLoop
         if (connection.writeBuffer().readableBytes() > 0) {
@@ -108,6 +110,7 @@ private:
         // 销毁前先调用CloseCallback
         connCloseCallback_(connection);
         connection.destroy();
+        // todo removeEvent应该交给对应的EventLoop线程去做（而不是在主线程中）
         connection.eventLoop()->epoller()->removeEvent(connection.socket().fd());
 
         std::unique_lock<std::mutex> ul(conns_mutex_);
@@ -119,10 +122,10 @@ private:
 
 private:
     Socket listenfd_;
-    EventLoop* loop_; // for listenfd
+    EventLoop *loop_; // for listenfd
     EventLoopPool pool_;
     std::unordered_map<int, TcpConnection> connections_; // 接管 TcpConnection 生命期
     std::mutex conns_mutex_;
-    std::function<void(TcpConnection&)> connMsgCallback_, connEstaCallback_, connCloseCallback_;
+    std::function<void(TcpConnection &)> connMsgCallback_, connEstaCallback_, connCloseCallback_;
 };
 

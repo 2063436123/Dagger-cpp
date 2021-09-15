@@ -10,10 +10,14 @@
 
 using namespace std;
 
+// todo 怎么给eventList加锁，全局一个锁不行
+std::mutex evMutex_;
+
 // 类外初始化
 thread_local epoll_event Epoller::evlist[MAX_EVENTS];
 
 Epoller::Epoller() {
+    // fixme 不能每个线程都调用一次epoll_create吗？
     epollfd_ = epoll_create1(0);
     if (epollfd_ < 0)
         assert(0);
@@ -27,12 +31,16 @@ void Epoller::addEvent(std::shared_ptr<Event> event) {
     int ret = epoll_ctl(epollfd_, EPOLL_CTL_ADD, event->fd(), &ev);
     if (ret < 0)
         assert(0);
-    eventList.insert({event->fd(), event});
+
+    unique_lock<mutex> ul(evMutex_);
+    if (eventList_.insert({event->fd(), event}).second == false)
+        assert(0);
 }
 
 std::shared_ptr<Event> Epoller::getEvent(int fd) {
-    auto iter = eventList.find(fd);
-    if (iter == eventList.end())
+    unique_lock<mutex> ul(evMutex_);
+    auto iter = eventList_.find(fd);
+    if (iter == eventList_.end())
         return {};
     return iter->second;
 }
@@ -57,35 +65,40 @@ void Epoller::removeEvent(int fd) {
     int ret = epoll_ctl(epollfd_, EPOLL_CTL_DEL, event->fd(), nullptr);
     if (ret < 0)
         assert(0);
-    eventList.erase(fd);
+    unique_lock<mutex> ul(evMutex_);
+    eventList_.erase(fd);
 }
 
 std::vector<std::shared_ptr<Event>> Epoller::poll(int timeout) {
     std::vector<std::shared_ptr<Event>> res;
+    con:
     int ret = epoll_wait(epollfd_, evlist, MAX_EVENTS, timeout);
     if (ret < 0) {
         cout << strerror(errno) << endl;
+        if (errno == EINTR)
+            goto con;
         assert(0);
     }
-    {
-        for (auto& x : evlist) {
-            cout << "epoll_wait ret: " << x.data.fd << endl;
-        }
-    }
+
+    // fixed 之前addEvent()中插入eventList中的Event消失了
+    // fixed: 为什么eventList是空的？ 因为loops_数组移动位置了
+
+    unique_lock<mutex> ul(evMutex_);
     for (int i = 0; i < ret; i++) {
-        auto iter = eventList.find(evlist[i].data.fd);
-        assert(iter != eventList.end());
+        auto iter = eventList_.find(evlist[i].data.fd);
+        assert(iter != eventList_.end());
         iter->second->setRevents(evlist[i].events);
         res.push_back(iter->second);
     }
+    ul.unlock();
     return res;
 }
 
-void handleRead(int fd) {
-    char buf[2000];
-    int n = read(fd, buf, 2000);
-    cout << "\treadN: " << n << "(" << std::string(buf, n) << ")" << endl;
-}
+//void handleRead(int fd) {
+//    char buf[2000];
+//    int n = read(fd, buf, 2000);
+//    cout << "\treadN: " << n << "(" << std::string(buf, n) << ")" << endl;
+//}
 
 //int main() {
 //    int fd = STDIN_FILENO;
