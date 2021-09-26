@@ -25,6 +25,7 @@ public:
                                                                pool_(loop) {
         listenfd_.setReuseAddr();
         listenfd_.bindAddr(addr);
+        listenfd_.setNonblock();
 
         loop_->init();
         auto event = Event::make(listenfd_.fd(), loop_->epoller());
@@ -73,6 +74,11 @@ private:
     // for listenfd_
     void acceptCallback() {
         int connfd = ::accept(listenfd_.fd(), nullptr, nullptr);
+        if (connfd < 0) {
+            if (errno == EAGAIN)
+                return;
+            assert(0);
+        }
         auto ownerEventLoop = pool_.getNextPool();
         std::cout << "when accept, address of eventLoop: " << ownerEventLoop << ", and the new connfd: " << connfd
                   << std::endl;
@@ -99,7 +105,6 @@ private:
 
     void closeConnection(TcpConnection &connection) {
         // fixed: 确保数据被发送
-        // todo 使用正确的EventLoop
         if (connection.writeBuffer().readableBytes() > 0) {
             auto event = connection.eventLoop()->epoller()->getEvent(connection.socket().fd());
             event->setReadable(false);
@@ -110,7 +115,6 @@ private:
         // 销毁前先调用CloseCallback
         connCloseCallback_(connection);
         connection.destroy();
-        // todo removeEvent应该交给对应的EventLoop线程去做（而不是在主线程中）
         connection.eventLoop()->epoller()->removeEvent(connection.socket().fd());
 
         std::unique_lock<std::mutex> ul(conns_mutex_);

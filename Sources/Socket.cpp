@@ -1,6 +1,7 @@
 //
 // Created by Hello Peter on 2021/9/7.
 //
+#include <fcntl.h>
 #include "../Socket.h"
 #include "../InAddr.h"
 #include "../Buffer.h"
@@ -47,7 +48,6 @@ int Socket::accept(InAddr &peerAddr) {
     int connfd_ = ::accept(sockfd_, &sock, &len);
     if (connfd_ < 0)
         assert(0);
-    // todo set connfd nonblock
     struct sockaddr_in *ipv4Addr = (sockaddr_in *) &sock;
     peerAddr = InAddr(ipv4Addr->sin_port, ipv4Addr->sin_addr, ipv4Addr->sin_family);
     return connfd_;
@@ -89,6 +89,15 @@ void Socket::resetClose() {
         assert(0);
     close(sockfd_);
     sockfd_ = 0;
+}
+
+void Socket::setNonblock() {
+    int flags = fcntl(sockfd_, F_GETFL, 0);
+    if (flags < 0) {
+        assert(0);
+    }
+    if (fcntl(sockfd_, F_SETFL, flags | O_NONBLOCK) < 0)
+        assert(0);
 }
 
 //int main() {

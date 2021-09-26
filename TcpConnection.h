@@ -21,7 +21,9 @@ class TcpConnection {
 
 public:
     static TcpConnection make(int connfd, TcpServer *tcpServer, EventLoop *loop) {
-        return TcpConnection(Socket::makeConnected(connfd), tcpServer, loop);
+        Socket connectedSokcet = Socket::makeConnected(connfd);
+        connectedSokcet.setNonblock();
+        return TcpConnection(std::move(connectedSokcet), tcpServer, loop);
     }
 
     Buffer<8192> &readBuffer() {

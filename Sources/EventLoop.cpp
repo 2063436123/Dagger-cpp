@@ -10,7 +10,5 @@ EventLoop::EventLoop() : looping_(false) {
     if (localEventLoop != nullptr)
         assert(0);
     localEventLoop = this;
-    std::cout << "$$$new EventLoop created, in thread " << std::this_thread::get_id() << ", &epoller: " << &epoller_
-              << std::endl;
 }
 

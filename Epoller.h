@@ -15,6 +15,10 @@ class Event;
 
 class Epoller {
 public:
+    int epollId() {
+        return epollfd_;
+    }
+
     Epoller();
 
     ~Epoller();

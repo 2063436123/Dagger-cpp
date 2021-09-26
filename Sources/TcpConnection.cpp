@@ -14,7 +14,6 @@ TcpConnection::TcpConnection(Socket socket, TcpServer *tcpServer, EventLoop *loo
 void TcpConnection::sendNonblock() {
     // user -> buffer(writable)
     // buffer(readable) -> socket
-    // todo send nonblockly!
     if (writeBuffer_.readableBytes() == 0) {
         auto event = loop_->epoller()->getEvent(socket().fd());
         event->setWritable(false);

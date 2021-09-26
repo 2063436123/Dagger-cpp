@@ -64,7 +64,7 @@ public:
         // clog << "test1: " << std::min(readableBytes(), maxBytes) << "&" << std::string(peek(), std::min(readableBytes(), maxBytes));
         int n = ::write(connfd, peek(), std::min(readableBytes(), maxBytes));
         assert(n >= 0 && n <= maxBytes);
-        writeIndex_ += n;
+        readIndex_ += n;
         return n;
     }
 

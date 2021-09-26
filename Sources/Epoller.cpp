@@ -7,18 +7,25 @@
 #include <iostream>
 #include <unistd.h>
 #include <cstring>
+#include <array>
 
 using namespace std;
 
-// todo 怎么给eventList加锁，全局一个锁不行
-std::mutex evMutex_;
+// note 怎么给eventList加锁，hash(epollerId)选择一个锁
+std::array<std::mutex, 5> g_mutexs;
 
 // 类外初始化
 thread_local epoll_event Epoller::evlist[MAX_EVENTS];
 
+// note: 这里使用hash(epollerId)来选择使用的锁
+static std::mutex& getLock(int id) {
+    return g_mutexs[(size_t)id % g_mutexs.size()];
+}
+
 Epoller::Epoller() {
     // fixme 不能每个线程都调用一次epoll_create吗？
     epollfd_ = epoll_create1(0);
+    cout << "epollfd: " << epollfd_ << endl;
     if (epollfd_ < 0)
         assert(0);
 }
@@ -32,13 +39,13 @@ void Epoller::addEvent(std::shared_ptr<Event> event) {
     if (ret < 0)
         assert(0);
 
-    unique_lock<mutex> ul(evMutex_);
+    unique_lock<mutex> ul(getLock(epollId()));
     if (eventList_.insert({event->fd(), event}).second == false)
         assert(0);
 }
 
 std::shared_ptr<Event> Epoller::getEvent(int fd) {
-    unique_lock<mutex> ul(evMutex_);
+    unique_lock<mutex> ul(getLock(epollId()));
     auto iter = eventList_.find(fd);
     if (iter == eventList_.end())
         return {};
@@ -65,7 +72,7 @@ void Epoller::removeEvent(int fd) {
     int ret = epoll_ctl(epollfd_, EPOLL_CTL_DEL, event->fd(), nullptr);
     if (ret < 0)
         assert(0);
-    unique_lock<mutex> ul(evMutex_);
+    unique_lock<mutex> ul(getLock(epollId()));
     eventList_.erase(fd);
 }
 
@@ -83,7 +90,7 @@ std::vector<std::shared_ptr<Event>> Epoller::poll(int timeout) {
     // fixed 之前addEvent()中插入eventList中的Event消失了
     // fixed: 为什么eventList是空的？ 因为loops_数组移动位置了
 
-    unique_lock<mutex> ul(evMutex_);
+    unique_lock<mutex> ul(getLock(epollId()));
     for (int i = 0; i < ret; i++) {
         auto iter = eventList_.find(evlist[i].data.fd);
         assert(iter != eventList_.end());
@@ -93,29 +100,3 @@ std::vector<std::shared_ptr<Event>> Epoller::poll(int timeout) {
     ul.unlock();
     return res;
 }
-
-//void handleRead(int fd) {
-//    char buf[2000];
-//    int n = read(fd, buf, 2000);
-//    cout << "\treadN: " << n << "(" << std::string(buf, n) << ")" << endl;
-//}
-
-//int main() {
-//    int fd = STDIN_FILENO;
-//    Epoller epoller;
-//    auto event = make_shared<Event>(fd, &epoller);
-//    epoller.addEvent(event);
-//
-//    event->setReadable(true);
-//    auto readCallback = [fd = event->fd()]() {
-//        handleRead(fd);
-//    };
-//    event->setReadCallback(readCallback);
-//
-//    auto res = epoller.poll();
-//    cout << "size: " << res.size() << endl;
-//    for (auto event : res) {
-//        cout << "fd: " << event->fd() << ", revents: " << event->revents() << endl;
-//        event->handle();
-//    }
-//}

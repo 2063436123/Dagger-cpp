@@ -54,6 +54,8 @@ public:
 
     int accept();
 
+    void setNonblock();
+
     void shutdown(int rdwr);
 
     void setTcpNoDelay();

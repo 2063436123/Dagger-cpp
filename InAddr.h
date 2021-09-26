@@ -55,7 +55,7 @@ private:
             ipv4Addr->sin_port = sin_port;
             ipv4Addr->sin_addr = sin_addr;
         } else if (sa_family == AF_INET6) {
-            // todo，sockaddr类型的addr_不足以承载ipv6的sockaddr_in6，除非使用sockaddr_storage
+            // todo，暂不支持ipv6
         } else {
             std::cout << "sa_family: " << sa_family << std::endl;
             assert(0);
