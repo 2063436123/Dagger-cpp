@@ -8,7 +8,7 @@ thread_local EventLoop *localEventLoop = nullptr;
 
 EventLoop::EventLoop() : looping_(false) {
     if (localEventLoop != nullptr)
-        assert(0);
+        Logger::fatal("localEventLoop isn't nullptr!");
     localEventLoop = this;
 }
 

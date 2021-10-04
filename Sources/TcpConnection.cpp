@@ -26,7 +26,7 @@ void TcpConnection::sendNonblock() {
     int n = ::write(socket().fd(), writeBuffer_.peek(),
                     writeBuffer_.readableBytes());
     if (n == -1 && errno != EAGAIN)
-        assert(0);
+        Logger::sys("nonblock write error");
     writeBuffer_.retrieve(n);
 }
 

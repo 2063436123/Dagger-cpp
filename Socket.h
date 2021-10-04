@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <cassert>
+#include "Options.h"
 
 class InAddr;
 
@@ -20,7 +21,7 @@ public:
     static Socket makeListened(int family = AF_INET, int type = SOCK_STREAM, int protocol = 0) {
         int sockfd = ::socket(family, type, protocol);
         if (sockfd == -1)
-            assert(0);
+            Logger::sys("socket error");
         return Socket(sockfd);
     }
 

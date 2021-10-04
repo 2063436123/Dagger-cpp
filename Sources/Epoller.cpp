@@ -27,7 +27,7 @@ Epoller::Epoller() {
     epollfd_ = epoll_create1(0);
     cout << "epollfd: " << epollfd_ << endl;
     if (epollfd_ < 0)
-        assert(0);
+        Logger::sys("epoll_create error");
 }
 
 Epoller::~Epoller() = default;
@@ -37,11 +37,11 @@ void Epoller::addEvent(std::shared_ptr<Event> event) {
             .data = epoll_data_t{.fd = event->fd()}};
     int ret = epoll_ctl(epollfd_, EPOLL_CTL_ADD, event->fd(), &ev);
     if (ret < 0)
-        assert(0);
+        Logger::sys("epoll_ctl error");
 
     unique_lock<mutex> ul(getLock(epollId()));
     if (eventList_.insert({event->fd(), event}).second == false)
-        assert(0);
+        Logger::fatal("insert error");
 }
 
 std::shared_ptr<Event> Epoller::getEvent(int fd) {
@@ -55,23 +55,23 @@ std::shared_ptr<Event> Epoller::getEvent(int fd) {
 void Epoller::updateEvent(int fd) {
     auto event = getEvent(fd);
     if (!event) {
-        assert(0); // not exist
+        Logger::fatal("in updateEvent can't getEvent"); // not exist
     }
     struct epoll_event ev{.events = static_cast<uint32_t>(event->events()),
             .data = epoll_data_t{.fd = event->fd()}};
     int ret = epoll_ctl(epollfd_, EPOLL_CTL_MOD, event->fd(), &ev);
     if (ret < 0)
-        assert(0);
+        Logger::sys("epoll_ctl error.");
 }
 
 void Epoller::removeEvent(int fd) {
     auto event = getEvent(fd);
     if (!event) {
-        assert(0); // not exist
+        Logger::fatal("in removeEvent, getEvent error"); // not exist
     }
     int ret = epoll_ctl(epollfd_, EPOLL_CTL_DEL, event->fd(), nullptr);
     if (ret < 0)
-        assert(0);
+        Logger::sys("epoll_ctl error");
     unique_lock<mutex> ul(getLock(epollId()));
     eventList_.erase(fd);
 }
@@ -81,10 +81,7 @@ std::vector<std::shared_ptr<Event>> Epoller::poll(int timeout) {
     con:
     int ret = epoll_wait(epollfd_, evlist, MAX_EVENTS, timeout);
     if (ret < 0) {
-        cout << strerror(errno) << endl;
-        if (errno == EINTR)
-            goto con;
-        assert(0);
+        Logger::sys("epoll_wait error");
     }
 
     // fixed 之前addEvent()中插入eventList中的Event消失了

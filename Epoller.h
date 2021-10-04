@@ -10,6 +10,7 @@
 #include <sys/epoll.h>
 #include <memory>
 #include <mutex>
+#include "Options.h"
 
 class Event;
 

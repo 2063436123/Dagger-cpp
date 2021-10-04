@@ -13,7 +13,7 @@ InAddr Socket::localInAddr() {
     // fixed : len必须赋初值为sizeof(sockaddr)，因为这是一个值-结果参数而非结果参数！
     socklen_t len = sizeof(sock);
     if (::getsockname(sockfd_, &sock, &len) < 0)
-        assert(0);
+        Logger::sys("getsockname error");
     struct sockaddr_in *ipv4Addr = (sockaddr_in *) &sock;
     return InAddr(ipv4Addr->sin_port, ipv4Addr->sin_addr, ipv4Addr->sin_family);
 }
@@ -22,8 +22,7 @@ InAddr Socket::peerInAddr() {
     sockaddr sock;
     socklen_t len = sizeof(sock);
     if (::getpeername(sockfd_, &sock, &len) < 0) {
-        cout << strerror(errno) << endl;
-        assert(0);
+        Logger::sys("getpeername error");
     }
     struct sockaddr_in *ipv4Addr = (sockaddr_in *) &sock;
     return InAddr(ipv4Addr->sin_port, ipv4Addr->sin_addr, ipv4Addr->sin_family);
@@ -31,15 +30,13 @@ InAddr Socket::peerInAddr() {
 
 void Socket::bindAddr(const InAddr &localAddr) {
     if (::bind(sockfd_, localAddr.sockAddr(), sizeof(localAddr)) < 0) {
-        cout << strerror(errno) << endl;
-        cout << "sockfd_: " << sockfd_ << endl;
-        assert(0);
+        Logger::sys("bind error in sockfd {}", sockfd_);
     }
 }
 
 void Socket::listen(int backlog) {
     if (::listen(sockfd_, backlog) < 0)
-        assert(0);
+        Logger::sys("listen error");
 }
 
 int Socket::accept(InAddr &peerAddr) {
@@ -47,7 +44,7 @@ int Socket::accept(InAddr &peerAddr) {
     socklen_t len;
     int connfd_ = ::accept(sockfd_, &sock, &len);
     if (connfd_ < 0)
-        assert(0);
+        Logger::sys("accept error");
     struct sockaddr_in *ipv4Addr = (sockaddr_in *) &sock;
     peerAddr = InAddr(ipv4Addr->sin_port, ipv4Addr->sin_addr, ipv4Addr->sin_family);
     return connfd_;
@@ -56,37 +53,37 @@ int Socket::accept(InAddr &peerAddr) {
 int Socket::accept() {
     int connfd_ = ::accept(sockfd_, nullptr, nullptr);
     if (connfd_ < 0)
-        assert(0);
+        Logger::sys("accept error");
     return connfd_;
 }
 
 void Socket::shutdown(int rdwr = SHUT_WR) {
     if (::shutdown(sockfd_, rdwr) < 0)
-        assert(0);
+        Logger::sys("shutdown error");
 }
 
 void Socket::setTcpNoDelay() {
     int on = 1;
     if (setsockopt(sockfd_, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on)) < 0)
-        assert(0);
+        Logger::sys("setsockopt TCP_NODELAY error");
 }
 
 void Socket::setReuseAddr() {
     int on = 1;
     if (setsockopt(sockfd_, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
-        assert(0);
+        Logger::sys("setsockopt SO_REUSEADDR error");
 }
 
 void Socket::setReusePort() {
     int on = 1;
     if (setsockopt(sockfd_, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)) < 0)
-        assert(0);
+        Logger::sys("setsockopt SO_REUSEPORT error");
 }
 
 void Socket::resetClose() {
     linger lr{.l_onoff = 1, .l_linger = 0};
     if (setsockopt(sockfd_, SOL_SOCKET, SO_LINGER, &lr, sizeof(lr)) < 0)
-        assert(0);
+        Logger::sys("setsockopt SO_LINGER error");
     close(sockfd_);
     sockfd_ = 0;
 }
@@ -94,10 +91,10 @@ void Socket::resetClose() {
 void Socket::setNonblock() {
     int flags = fcntl(sockfd_, F_GETFL, 0);
     if (flags < 0) {
-        assert(0);
+        Logger::sys("fcntl F_GETFL error");
     }
     if (fcntl(sockfd_, F_SETFL, flags | O_NONBLOCK) < 0)
-        assert(0);
+        Logger::sys("fcntl F_SETFL error");
 }
 
 //int main() {

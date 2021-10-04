@@ -96,8 +96,7 @@ public:
             closeCallback_();
             return;
         }
-        std::cout << "revents: " << revents_ << std::endl;
-        assert(0);
+        Logger::fatal("revents {} can't be recognized!", revents_);
     }
 
 private:

@@ -77,7 +77,7 @@ private:
         if (connfd < 0) {
             if (errno == EAGAIN)
                 return;
-            assert(0);
+            Logger::sys("accept error");
         }
         auto ownerEventLoop = pool_.getNextPool();
         std::cout << "when accept, address of eventLoop: " << ownerEventLoop << ", and the new connfd: " << connfd
@@ -91,10 +91,10 @@ private:
         ul.unlock();
 
         assert(ret.second);
+
         auto &newConn = ret.first->second;
         std::cout << "newConn: " << &newConn << std::endl;
         auto bindCallback = [this, &newConn]() {
-            std::cout << "callback newConn: " << &newConn << std::endl;
             this->preConnMsgCallback(newConn);
         };
         connEvent->setReadCallback(bindCallback);
@@ -111,7 +111,7 @@ private:
             connection.send(true);
             return;
         }
-        std::cout << "when close, address of eventLoop: " << connection.eventLoop() << std::endl;
+//        std::cout << "when close, address of eventLoop: " << connection.eventLoop() << std::endl;
         // 销毁前先调用CloseCallback
         connCloseCallback_(connection);
         connection.destroy();

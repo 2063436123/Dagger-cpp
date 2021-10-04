@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "Logger.h"
 
 class InAddr {
 public:
@@ -58,7 +59,7 @@ private:
             // todo，暂不支持ipv6
         } else {
             std::cout << "sa_family: " << sa_family << std::endl;
-            assert(0);
+            Logger::fatal("unrecognized sa_family: {}", sa_family);
         }
     }
 
