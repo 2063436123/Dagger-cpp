@@ -80,8 +80,7 @@ private:
             Logger::sys("accept error");
         }
         auto ownerEventLoop = pool_.getNextPool();
-        std::cout << "when accept, address of eventLoop: " << ownerEventLoop << ", and the new connfd: " << connfd
-                  << std::endl;
+        Logger::info("when accept, address of eventLoop: {} and the new connfd: {}\n", (void *) ownerEventLoop, connfd);
         auto connEvent = Event::make(connfd, ownerEventLoop->epoller());
 
         std::pair<int, TcpConnection> apair(connfd, TcpConnection::make(connfd, this, ownerEventLoop));
@@ -93,7 +92,7 @@ private:
         assert(ret.second);
 
         auto &newConn = ret.first->second;
-        std::cout << "newConn: " << &newConn << std::endl;
+        Logger::info("newConn: {}\n", (void *) &newConn);
         auto bindCallback = [this, &newConn]() {
             this->preConnMsgCallback(newConn);
         };
@@ -103,6 +102,7 @@ private:
         connEstaCallback_(newConn);
     }
 
+    // todo 对connections_的insert和erase操作都应该由mainThread来完成，参考muduo runInLoop.
     void closeConnection(TcpConnection &connection) {
         // fixed: 确保数据被发送
         if (connection.writeBuffer().readableBytes() > 0) {
