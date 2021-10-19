@@ -26,6 +26,12 @@ public:
         return TcpConnection(std::move(connectedSokcet), tcpServer, loop);
     }
 
+    static TcpConnection* makeHeapObject(int connfd, TcpServer *tcpServer, EventLoop *loop) {
+        Socket connectedSokcet = Socket::makeConnected(connfd);
+        connectedSokcet.setNonblock();
+        return new TcpConnection(std::move(connectedSokcet), tcpServer, loop);
+    }
+
     Buffer<8192> &readBuffer() {
         return readBuffer_;
     }

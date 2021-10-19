@@ -46,6 +46,8 @@ public:
     }
 
     ~EventLoopPool() {
+        for (auto &aLoop: loops_)
+            aLoop.stop();
         for (auto &aThread : threads_)
             aThread.join();
     }

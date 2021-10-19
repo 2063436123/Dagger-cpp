@@ -39,7 +39,7 @@ void TcpConnection::send(bool isLast) {
 }
 
 void TcpConnection::activeClose() {
-    tcpServer_->closeConnection(*this);
+    tcpServer_->closeConnection(this);
 }
 
 
