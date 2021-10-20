@@ -13,13 +13,21 @@
 class TcpServer;
 
 class TcpConnection {
-    enum State {
-        BLANK, ESTABLISHED, CLOSED
-    };
 
     TcpConnection(Socket socket, TcpServer *tcpServer, EventLoop *loop);
 
 public:
+    // lastReceiveTime: used by TimeWheelingPolicy, updated when inited or new message arrived
+    uint32_t lastReceiveTime;
+
+    enum State {
+        BLANK, ESTABLISHED, CLOSED
+    };
+
+    State state() {
+        return state_;
+    }
+
     static TcpConnection make(int connfd, TcpServer *tcpServer, EventLoop *loop) {
         Socket connectedSokcet = Socket::makeConnected(connfd);
         connectedSokcet.setNonblock();
@@ -60,6 +68,7 @@ public:
     void destroy() {
         // todo
         state_ = CLOSED;
+        loop_->epoller()->removeEvent(socket().fd());
     }
 
     void activeClose();

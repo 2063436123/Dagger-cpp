@@ -13,8 +13,11 @@ void whenNewConnectionEstablished(TcpConnection *conn) {
 //    cout << "fd: " << s.fd() << endl;
 }
 
+TcpServer *server_copy;
 void whenMsgArrived(TcpConnection *conn) {
     Socket &s = conn->socket();
+    // todo exit safely when bye
+
     auto &buf = conn->readBuffer();
 //    cout << "read: " << std::string(buf.peek(), buf.readableBytes());
 
@@ -30,15 +33,6 @@ void whenClose(TcpConnection *conn) {
     // fixed 此时不该调用peerInAddr()，因为可能对端已经关闭了（当对端而非我端主动关闭时）
     // s.peerInAddr().ipPortStr() << " to " << s.localInAddr().ipPortStr() << endl;
 }
-TcpServer *server_copy;
-void whenStdinMsgArrived(shared_ptr<TcpConnection> conn) {
-    auto& buf = conn->readBuffer();
-    Logger::info("stopping...");
-    Logger::fatal("stdin:{}", std::string(buf.peek(), buf.readableBytes()));
-    if (conn->readBuffer().findStr("bye"))
-        server_copy->stop();
-    conn-> // todo关闭stdin的readable监听，从而顺利退出程序
-}
 
 int main() {
     if (Options::setMaxFiles(1048576) < 0)
@@ -51,7 +45,7 @@ int main() {
     server_copy = &server;
 
     // for stop tcpServer
-    server.addOnlyMsgChannel(STDIN_FILENO, whenStdinMsgArrived);
+//    server.addOnlyMsgChannel(STDIN_FILENO, whenStdinMsgArrived);
 
     server.setConnEstaCallback(whenNewConnectionEstablished);
     server.setConnMsgCallback(whenMsgArrived);

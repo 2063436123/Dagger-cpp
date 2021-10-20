@@ -2,7 +2,8 @@
 // Created by Hello Peter on 2021/9/7.
 //
 
-#pragma once
+#ifndef TESTLINUX_TCPSERVER_H
+#define TESTLINUX_TCPSERVER_H
 
 #include <map>
 #include "Buffer.h"
@@ -12,7 +13,10 @@
 #include "TcpConnection.h"
 #include "EventLoop.h"
 #include "EventLoopPool.h"
+#include "TimeWheeling.h"
+#include <sys/timerfd.h>
 
+extern uint32_t timeInProcess; // counter for checking idle connections
 // 单线程TcpServer
 class TcpServer {
     friend class TcpConnection;
@@ -33,6 +37,8 @@ public:
         assert(event);
         event->setReadCallback(std::bind(&TcpServer::acceptCallback, this));
         event->setReadable(true);
+
+        createTimer();
     }
 
     void setConnMsgCallback(std::function<void(TcpConnection *)> callback) {
@@ -60,18 +66,28 @@ public:
         // pool_.~EventLoopPool();
     }
 
-    void addOnlyMsgChannel(int connfd, std::function<void(std::shared_ptr<TcpConnection>)> connMsgCallback) {
-        auto ownerEventLoop = pool_.getNextPool();
-        auto connEvent = Event::make(connfd, ownerEventLoop->epoller());
-        std::shared_ptr<TcpConnection> newConn(TcpConnection::makeHeapObject(connfd, this, ownerEventLoop));
-        auto bindCallback = [connMsgCallback, handle = newConn]() mutable {
-            connMsgCallback(handle);
+private:
+    void createTimer() {
+        int timerfd = timerfd_create(CLOCK_MONOTONIC, 0);
+        // 每秒触发一次
+        struct itimerspec spec{
+                .it_interval = timespec{.tv_sec = 1, .tv_nsec = 0},
+                .it_value = timespec{.tv_sec = 1, .tv_nsec = 0}};
+        timerfd_settime(timerfd, 0, &spec, nullptr);
+
+        // 计时器回调
+        auto readCallback = [timerfd, this]() {
+            uint64_t tmp;
+            read(timerfd, &tmp, sizeof(tmp)); // consume
+            ++timeInProcess; // 每秒加一
+            this->wheelPolicy_.eraseIdleConnections();
         };
-        connEvent->setReadCallback(bindCallback);
-        connEvent->setReadable(true);
+
+        auto timerEvent = Event::make(timerfd, loop_->epoller());
+        timerEvent->setReadCallback(readCallback);
+        timerEvent->setReadable(true);
     }
 
-private:
     // for connfd
     // socket -> buffer(writable)
     // buffer(readable) -> user
@@ -84,6 +100,7 @@ private:
             closeConnection(connection);
             return;
         }
+        connection->lastReceiveTime = timeInProcess;
         connMsgCallback_(connection);
     }
 
@@ -99,16 +116,10 @@ private:
         Logger::info("when accept, address of eventLoop: {} and the new connfd: {}\n", (void *) ownerEventLoop, connfd);
         auto connEvent = Event::make(connfd, ownerEventLoop->epoller());
 
-//        std::pair<int, TcpConnection> apair(connfd, TcpConnection::make(connfd, this, ownerEventLoop));
-
-//        std::unique_lock<std::mutex> ul(conns_mutex_);
-//        auto ret = connections_.insert(std::move(apair));
-//        ul.unlock();
-
-//        assert(ret.second);
-
-//        auto &newConn = ret.first->second;
         auto newConn = TcpConnection::makeHeapObject(connfd, this, ownerEventLoop);
+        newConn->lastReceiveTime = timeInProcess;
+        wheelPolicy_.addNewConnection(newConn);
+
         Logger::info("newConn: {}\n", (void *) newConn);
         auto bindCallback = [this, newConn]() {
             this->preConnMsgCallback(newConn);
@@ -128,17 +139,12 @@ private:
             connection->send(true);
             return;
         }
-//        std::cout << "when close, address of eventLoop: " << connection.eventLoop() << std::endl;
         // 销毁前先调用CloseCallback
         connCloseCallback_(connection);
         connection->destroy();
-        connection->eventLoop()->epoller()->removeEvent(connection->socket().fd());
 
-        // todo 释放connection资源
-        delete connection;
-//        std::unique_lock<std::mutex> ul(conns_mutex_);
-//        connections_.erase(connection.socket().fd());
-//        ul.unlock();
+        // todo 释放connection资源，由wheeling来（定时而非及时）释放资源哈哈
+//        delete connection;
 
         return;
     }
@@ -147,8 +153,10 @@ private:
     Socket listenfd_;
     EventLoop *loop_; // for listenfd
     EventLoopPool pool_;
+    TimerWheelingPolicy wheelPolicy_; // 提供一种策略，tcpserver每秒调用一次该策略来删除某些超时连接
 //    std::unordered_map<int, TcpConnection> connections_; // 接管 TcpConnection 生命期
 //    std::mutex conns_mutex_;
-    std::function<void(TcpConnection*)> connMsgCallback_, connEstaCallback_, connCloseCallback_;
+    std::function<void(TcpConnection *)> connMsgCallback_, connEstaCallback_, connCloseCallback_;
 };
 
+#endif

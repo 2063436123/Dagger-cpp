@@ -20,9 +20,9 @@
 // 表示一个定时事件，时间单位都是ms
 class Timer {
 public:
-    using callbackType = std::function<void(any)>;
+    using callbackType = std::function<void(std::any)>;
 
-    Timer(callbackType callback, uint64_t expirationTime, uint64_t intervalTime, any data)
+    Timer(callbackType callback, uint64_t expirationTime, uint64_t intervalTime, std::any data)
             : callback_(callback), expirationTime_(expirationTime), intervalTime_(intervalTime), data_(data) {
         id_ = ++nextId_;
     }
@@ -37,7 +37,7 @@ public:
         return id_;
     }
 
-    any data() const {
+    std::any data() const {
         return data_;
     }
 
@@ -57,7 +57,7 @@ public:
     }
 
     void bgCallback() {
-        async(&Timer::callback, this);
+        std::async(&Timer::callback, this);
     }
 
     bool repeat() const {
@@ -77,66 +77,54 @@ public:
     }
 
 private:
-    static atomic_uint32_t nextId_;
+    static std::atomic_uint32_t nextId_;
     uint32_t id_;
-    any data_;
+    std::any data_;
     uint64_t expirationTime_;
     uint64_t intervalTime_;
     callbackType callback_;
 };
 
-atomic_uint32_t Timer::nextId_ = 0;
+//std::atomic_uint32_t Timer::nextId_ = 0;
 
-
-class TimerQueue {
-public:
-    TimerQueue() {}
-
-    void addTimer(const Timer &timer) {
-        // fixme 如果Timer::operator<不定义为const的，那么insert将报错！
-        auto iter = timers_.insert(timer);
-    }
-
-    void removeTimer(uint32_t timerId) {
-        auto iter = timers_.begin();
-        timers_.erase(iter);
-    }
-
-    // 主函数，无尽循环
-    void eventloop() {
-        while (true) {
-            // asm volatile( "rep;nop": : : "memory"); // slow cpu spin
-            if (!timers_.empty()) {
-                auto iter = timers_.begin();
-                auto timer = *iter;
-                timers_.erase(iter);
-                uint64_t leftTime = timer.timeToNext();
-                usleep(leftTime * 1000);
-                timer.bgCallback();
-                if (timer.repeat()) {
-                    timer.addInterval();
-                    timers_.insert(timer);
-                }
-            }
-        }
-    }
-
-private:
-    std::multiset<Timer> timers_;
-
-};
-
-void show1(any data) {
-    cout << "timer1 occur!" << endl;
-}
-
-void show2(any data) {
-    cout << "timer2 occur!" << endl;
-}
-
-void show3(any data) {
-    cout << "timer3 occur!" << endl;
-}
+//
+//class TimerQueue {
+//public:
+//    TimerQueue() {}
+//
+//    void addTimer(const Timer &timer) {
+//        // fixme 如果Timer::operator<不定义为const的，那么insert将报错！
+//        auto iter = timers_.insert(timer);
+//    }
+//
+//    void removeTimer(uint32_t timerId) {
+//        auto iter = timers_.begin();
+//        timers_.erase(iter);
+//    }
+//
+//    // 主函数，无尽循环
+//    void eventloop() {
+//        while (true) {
+//            // asm volatile( "rep;nop": : : "memory"); // slow cpu spin
+//            if (!timers_.empty()) {
+//                auto iter = timers_.begin();
+//                auto timer = *iter;
+//                timers_.erase(iter);
+//                uint64_t leftTime = timer.timeToNext();
+//                usleep(leftTime * 1000);
+//                timer.bgCallback();
+//                if (timer.repeat()) {
+//                    timer.addInterval();
+//                    timers_.insert(timer);
+//                }
+//            }
+//        }
+//    }
+//
+//private:
+//    std::multiset<Timer> timers_;
+//
+//};
 
 //int main() {
 //    // todo 判断sizeof(Timer)和sizeof各字段的关系。

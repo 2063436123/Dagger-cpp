@@ -7,7 +7,7 @@
 
 
 TcpConnection::TcpConnection(Socket socket, TcpServer *tcpServer, EventLoop *loop) : socket_(std::move(socket)),
-                                                                                     state_(BLANK), isWillClose(false),
+                                                                                     state_(ESTABLISHED), isWillClose(false),
                                                                                      tcpServer_(tcpServer),
                                                                                      loop_(loop) {}
 

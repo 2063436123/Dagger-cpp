@@ -4,7 +4,7 @@
 #include <cstring>
 #include <string>
 #include <sys/time.h>
-#include "Logger.h"
+#include "../Logger.h"
 
 uint32_t fullBufferCnt;
 uint32_t enterLogCnt;
