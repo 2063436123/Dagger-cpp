@@ -47,7 +47,7 @@ int main() {
     TcpServer server(std::move(s), InAddr("12345"), &loop);
 
     // 添加定时任务
-    server.addTimedTask(1000, 2000, taskPerSecond);
+//    server.addTimedTask(1000, 2000, taskPerSecond);
 
     server.setConnEstaCallback(whenNewConnectionEstablished);
     server.setConnMsgCallback(whenMsgArrived);
