@@ -15,6 +15,7 @@ private:
     }
 
 public:
+    // 注意：make时已将event添加到epoller的监听列表中
     static std::shared_ptr<Event> make(int fd, Epoller *epoller) {
         auto event = std::shared_ptr<Event>(new Event(fd, epoller));
         assert(event);

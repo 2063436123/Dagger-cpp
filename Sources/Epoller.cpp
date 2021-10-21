@@ -23,9 +23,7 @@ static std::mutex& getLock(int id) {
 }
 
 Epoller::Epoller() {
-    // fixme 不能每个线程都调用一次epoll_create吗？
     epollfd_ = epoll_create1(0);
-    cout << "epollfd: " << epollfd_ << endl;
     if (epollfd_ < 0)
         Logger::sys("epoll_create error");
 }
@@ -40,8 +38,9 @@ void Epoller::addEvent(std::shared_ptr<Event> event) {
         Logger::sys("epoll_ctl error");
 
     unique_lock<mutex> ul(getLock(epollId()));
+
     if (eventList_.insert({event->fd(), event}).second == false)
-        Logger::fatal("insert error");
+        Logger::fatal("insert error\n");
 }
 
 std::shared_ptr<Event> Epoller::getEvent(int fd) {
@@ -55,7 +54,7 @@ std::shared_ptr<Event> Epoller::getEvent(int fd) {
 void Epoller::updateEvent(int fd) {
     auto event = getEvent(fd);
     if (!event) {
-        Logger::fatal("in updateEvent can't getEvent"); // not exist
+        Logger::fatal("in updateEvent can't getEvent\n"); // not exist
     }
     struct epoll_event ev{.events = static_cast<uint32_t>(event->events()),
             .data = epoll_data_t{.fd = event->fd()}};

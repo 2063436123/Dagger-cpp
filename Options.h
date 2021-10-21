@@ -13,7 +13,7 @@ public:
     static size_t getMaxFiles() {
         rlimit ret;
         getrlimit(RLIMIT_NOFILE, &ret);
-        Logger::info("cur: {}, max: {}", ret.rlim_cur, ret.rlim_max);
+        Logger::info("cur: {}, max: {}\n", ret.rlim_cur, ret.rlim_max);
         return ret.rlim_cur;
     }
 

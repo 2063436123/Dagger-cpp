@@ -12,9 +12,9 @@ const int MAX_THREADS = std::thread::hardware_concurrency() * 2; // 64-bit macos
 
 class EventLoopPool {
 public:
-    EventLoopPool(EventLoop *single_loop) : single_loop_(single_loop), nextIndex_(0) {
-        // note EventLoop的上限由此vector的大小决定
-        loops_.reserve(MAX_THREADS);
+    EventLoopPool(EventLoop *single_loop) : single_loop_(single_loop), nextIndex_(0), loops_(MAX_THREADS), realSize_(0) {
+        // note EventLoop的上限由MAX_THREADS决定
+//        loops_.resize(MAX_THREADS); // 如果loops_的元素是不可移动（同时也不可拷贝）的，那么只能在构造函数中分配数组大小
         threads_.reserve(MAX_THREADS);
     }
 
@@ -22,27 +22,28 @@ public:
         if (threads_.empty())
             return single_loop_;
         // 大致公平的算法
-        return &loops_[nextIndex_++ % loops_.size()];
+        return &loops_[nextIndex_++ % realSize_];
     }
 
-    void threadFunc() {
-        std::unique_lock<std::mutex> ul(threadInitMutex_);
+    void threadFunc(int i) {
+//        std::unique_lock<std::mutex> ul(threadInitMutex_);
         // fixed 问题在于loops_增长时会移动原来的元素，那么对它的this引用就会失效。
-        auto &loop = loops_.emplace_back(); // 线索，拷贝/移动未定义的问题吗？
+        auto &loop = loops_[i]; // 线索，拷贝/移动未定义的问题吗？
         // 每个线程直接运行EventLoop::start()，其中会执行Epoller::poll()，阻塞在epoll_wait上；
         // 得益于epoll对并发的支持，single_loop_可以在某一Epoller阻塞时向其中添加新的监听事件。
-        ul.unlock();
+//        ul.unlock();
         loop.init();
         loop.start();
     }
 
     void setHelperThreadsNumAndStart(size_t nums = 0) {
         assert(nums <= MAX_THREADS);
+        realSize_ = nums;
         for (size_t i = 0; i < nums; i++) {
-            threads_.emplace_back(&EventLoopPool::threadFunc, this);
+            threads_.emplace_back(&EventLoopPool::threadFunc, this, i);
         }
         // todo: sleep是为了保证在此函数返回时，所有线程已创建完毕且运行至EventLoop::start()，但应该使用条件变量代替
-        sleep(2);
+        sleep(1);
     }
 
     ~EventLoopPool() {
@@ -60,6 +61,7 @@ private:
     std::vector<std::thread> threads_;
     std::vector<EventLoop> loops_;
     // 下一个被选中的EventLoop
+    size_t realSize_;
     size_t nextIndex_;
 };
 

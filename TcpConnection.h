@@ -66,7 +66,7 @@ public:
     }
 
     void destroy() {
-        // todo
+        // todo 补充点什么
         state_ = CLOSED;
         loop_->epoller()->removeEvent(socket().fd());
     }

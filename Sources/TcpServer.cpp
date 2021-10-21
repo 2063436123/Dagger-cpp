@@ -4,4 +4,6 @@
 
 #include "../TcpServer.h"
 
-extern uint32_t timeInProcess = 0; // counter for checking idle connections
+#ifdef IDLE_CONNECTIONS_MANAGER
+uint32_t timeInProcess = 0; // counter for checking idle connections
+#endif
