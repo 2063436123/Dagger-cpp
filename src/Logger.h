@@ -16,6 +16,7 @@
 #include <chrono>
 #include <memory>
 #include <fmt/core.h>
+#include <atomic>
 
 #define EMPTYS_INIT_SIZE 4
 #define EMPTYS_MAX_SIZE 20
@@ -117,6 +118,7 @@ private:
     std::mutex mutex_;
     std::condition_variable cond_, willCloseCond_;
     std::atomic_flag running;
+    std::atomic<bool> isInCollectLog_ = false;
 
     std::unique_ptr<std::string> currentBuffer_;
     std::vector<std::unique_ptr<std::string>> buffers_;

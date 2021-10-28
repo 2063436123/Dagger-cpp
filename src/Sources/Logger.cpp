@@ -72,7 +72,8 @@ void Logger::log(LogLevel level, const char *logline, size_t len) {
   }
   *currentBuffer_ += msg;
 
-  cond_.notify_one();
+  if (!isInCollectLog_)
+    cond_.notify_one();
 }
 
 void Logger::backThread() {
@@ -93,9 +94,12 @@ void Logger::backThread() {
         // 是为了及时回收currentBuffer_缓冲区
         cond_.wait_for(ul, chrono::milliseconds(1000 * MIN_SYNC_TIME));
       }
+      isInCollectLog_ = true;
       if (currentBuffer_)
         buffers_.push_back(std::move(currentBuffer_));
       fullBuffers.swap(buffers_);
+      isInCollectLog_ = false;
+
       uint32_t i = 0;
       while (emptys_.size() < EMPTYS_MAX_SIZE && i < EMPTYS_INIT_SIZE) {
         emptys_.push_back(std::move(newEmptys[i++]));

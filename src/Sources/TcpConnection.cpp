@@ -3,12 +3,14 @@
 //
 
 #include "../TcpConnection.h"
+
+#include <utility>
 #include "../TcpServer.h"
 
 
-TcpConnection::TcpConnection(Socket socket, TcpServer *tcpServer, EventLoop *loop) : socket_(std::move(socket)),
+TcpConnection::TcpConnection(Socket socket, TcpSource *tcpSource, EventLoop *loop) : socket_(std::move(socket)),
                                                                                      state_(ESTABLISHED), isWillClose(false),
-                                                                                     tcpServer_(tcpServer),
+                                                                                     tcpSource_(tcpSource),
                                                                                      loop_(loop) {}
 
 void TcpConnection::sendNonblock() {
@@ -39,7 +41,7 @@ void TcpConnection::send(bool isLast) {
 }
 
 void TcpConnection::activeClose() {
-    tcpServer_->closeConnection(this);
+    tcpSource_->closeConnection(this, destoryCallback_);
 }
 
 

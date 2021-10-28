@@ -29,7 +29,7 @@ public:
         initAddr(port, addr, sa_family);
     }
 
-    // 注意，此构造函数的sin_port和sin_addr要求是主机字节序
+    // 注意，此构造函数的sin_port和sin_addr要求是网络字节序（大端）
     InAddr(in_port_t sin_port, in_addr sin_addr = in_addr{.s_addr = INADDR_ANY},
            sa_family_t sa_family = AF_INET) {
         initAddr(sin_port, sin_addr, sa_family);

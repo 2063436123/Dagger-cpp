@@ -9,12 +9,13 @@
 #include "Event.h"
 #include "Epoller.h"
 #include "EventLoop.h"
+#include "TcpSource.h"
 
 class TcpServer;
 
 class TcpConnection {
 
-    TcpConnection(Socket socket, TcpServer *tcpServer, EventLoop *loop);
+    TcpConnection(Socket socket, TcpSource *tcpSource, EventLoop *loop);
 
 public:
     // lastReceiveTime: used by TimeWheelingPolicy, updated when inited or new message arrived
@@ -28,16 +29,16 @@ public:
         return state_;
     }
 
-    static TcpConnection make(int connfd, TcpServer *tcpServer, EventLoop *loop) {
+    static TcpConnection make(int connfd, TcpSource *tcpSource, EventLoop *loop) {
         Socket connectedSokcet = Socket::makeConnected(connfd);
         connectedSokcet.setNonblock();
-        return TcpConnection(std::move(connectedSokcet), tcpServer, loop);
+        return TcpConnection(std::move(connectedSokcet), tcpSource, loop);
     }
 
-    static TcpConnection* makeHeapObject(int connfd, TcpServer *tcpServer, EventLoop *loop) {
+    static TcpConnection* makeHeapObject(int connfd, TcpSource *tcpSource, EventLoop *loop) {
         Socket connectedSokcet = Socket::makeConnected(connfd);
         connectedSokcet.setNonblock();
-        return new TcpConnection(std::move(connectedSokcet), tcpServer, loop);
+        return new TcpConnection(std::move(connectedSokcet), tcpSource, loop);
     }
 
     Buffer<8192> &readBuffer() {
@@ -50,6 +51,8 @@ public:
 
     // 像writeBuffer_中填充值并且调用send()来确保发送最终完成
     void send(const char *str, size_t len) {
+        if (state_ != State::ESTABLISHED)
+            Logger::fatal("connection closed, can't send data!\n");
         writeBuffer_.append(str, len);
         send();
     }
@@ -71,6 +74,10 @@ public:
         loop_->epoller()->removeEvent(socket().fd());
     }
 
+    void setDestoryCallback(std::function<void(TcpConnection*)> destoryCallback) {
+        destoryCallback_ = destoryCallback;
+    }
+
     void activeClose();
 
     TcpConnection(TcpConnection &&other) = default;
@@ -86,9 +93,10 @@ private:
     Buffer<8192> readBuffer_, writeBuffer_;
     Socket socket_;
     bool isWillClose;
+    std::function<void(TcpConnection*)>destoryCallback_ = nullptr; // only for FreeServerClient
     State state_;
     // 保存Tcpserver的引用是为了调用tcpServer_->closeConnection
-    TcpServer *tcpServer_;
+    TcpSource *tcpSource_;
     // 保存EventLoop的引用是为了调用loop_->epoller()或指明谁在控制此连接
     EventLoop *loop_;
 };

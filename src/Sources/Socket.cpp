@@ -97,6 +97,11 @@ void Socket::setNonblock() {
         Logger::sys("fcntl F_SETFL error");
 }
 
+void Socket::connect(const InAddr &peerAddr) {
+    if (::connect(sockfd_, peerAddr.sockAddr(), sizeof(peerAddr)) < 0)
+        Logger::sys("connect error");
+}
+
 //int main() {
 //    Socket socket1 = Socket::make();
 //    socket1.setReuseAddr();

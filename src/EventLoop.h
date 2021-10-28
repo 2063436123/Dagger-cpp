@@ -50,6 +50,7 @@ public:
 
     void stop() {
         looping_ = false;
+        writeWakeUpFd();
         // do sth...
     }
 
@@ -58,14 +59,19 @@ public:
         read(wakeUpFd_, &tmp, sizeof(tmp));
     }
 
+    void writeWakeUpFd() {
+        uint64_t tmp;
+        write(wakeUpFd_, &tmp, sizeof(tmp));
+    }
+
     void runInLoop(std::function<void()> task) {
+        // runInLoop 目前还不需要加锁，因为只有main thread会每一秒调用一次该函数
         std::lock_guard<SpinLock> lg(lock_);
         tasks_.push_back(task);
         // 打断eopller.poll()，否则在没有新事件到来时，这些task将饥饿
         if (!isInTaskHanding_) {
             // wakeup
-            uint64_t tmp;
-            write(wakeUpFd_, &tmp, sizeof(tmp));
+            writeWakeUpFd();
         }
     }
 

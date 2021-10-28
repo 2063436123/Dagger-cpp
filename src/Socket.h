@@ -18,7 +18,7 @@ private:
     Socket(int sockfd) : sockfd_(sockfd) {}
 
 public:
-    static Socket makeListened(int family = AF_INET, int type = SOCK_STREAM, int protocol = 0) {
+    static Socket makeNewSocket(int family = AF_INET, int type = SOCK_STREAM, int protocol = 0) {
         int sockfd = ::socket(family, type, protocol);
         if (sockfd == -1)
             Logger::sys("socket error");
@@ -54,6 +54,8 @@ public:
     int accept(InAddr &peerAddr);
 
     int accept();
+
+    void connect(const InAddr& peerAddr);
 
     void setNonblock();
 

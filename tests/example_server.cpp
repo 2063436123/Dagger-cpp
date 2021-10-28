@@ -2,7 +2,7 @@
 // Created by Hello Peter on 2021/9/7.
 //
 
-#include "../TcpServer.h"
+#include "../src/TcpServer.h"
 
 using namespace std;
 
@@ -22,6 +22,7 @@ void whenMsgArrived(TcpConnection *conn) {
     conn->send(buf.peek(), buf.readableBytes());
 
     buf.retrieveAll();
+    // 如果不开启IDLE_CONNECTIONS_MANAGER，那么要么等待对端主动关闭（可能无限等待），要么在这里主动关闭。
     conn->activeClose();
 }
 
@@ -42,7 +43,7 @@ int main() {
         Logger::sys("getMaxFiles error");
     Options::getMaxFiles();
 
-    auto s = Socket::makeListened();
+    auto s = Socket::makeNewSocket();
     EventLoop loop;
     TcpServer server(std::move(s), InAddr("12345"), &loop);
 
