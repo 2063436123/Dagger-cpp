@@ -29,7 +29,7 @@ Epoller::Epoller() {
 }
 
 Epoller::~Epoller() = default;
-
+// !Epoller操作不需要加锁！
 void Epoller::addEvent(std::shared_ptr<Event> event) {
     struct epoll_event ev{.events = static_cast<uint32_t>(event->events()),
             .data = epoll_data_t{.fd = event->fd()}};
@@ -37,14 +37,14 @@ void Epoller::addEvent(std::shared_ptr<Event> event) {
     if (ret < 0)
         Logger::sys("epoll_ctl error");
 
-    unique_lock<mutex> ul(getLock(epollId()));
+    lock_guard<mutex> lg(getLock(epollId()));
 
-    if (eventList_.insert({event->fd(), event}).second == false)
+    if (!eventList_.insert({event->fd(), event}).second)
         Logger::fatal("insert error\n");
 }
 
 std::shared_ptr<Event> Epoller::getEvent(int fd) {
-    unique_lock<mutex> ul(getLock(epollId()));
+    lock_guard<mutex> lg(getLock(epollId()));
     auto iter = eventList_.find(fd);
     if (iter == eventList_.end())
         return {};
@@ -71,7 +71,7 @@ void Epoller::removeEvent(int fd) {
     int ret = epoll_ctl(epollfd_, EPOLL_CTL_DEL, event->fd(), nullptr);
     if (ret < 0)
         Logger::sys("epoll_ctl error");
-    unique_lock<mutex> ul(getLock(epollId()));
+    lock_guard<mutex> lg(getLock(epollId()));
     eventList_.erase(fd);
 }
 
@@ -83,13 +83,12 @@ std::vector<std::shared_ptr<Event>> Epoller::poll(int timeout) {
         return {};
     }
 
-    unique_lock<mutex> ul(getLock(epollId()));
+    lock_guard<mutex> lg(getLock(epollId()));
     for (int i = 0; i < ret; i++) {
         auto iter = eventList_.find(evlist[i].data.fd);
         assert(iter != eventList_.end());
         iter->second->setRevents(evlist[i].events);
         res.push_back(iter->second);
     }
-    ul.unlock();
     return res;
 }

@@ -6,6 +6,7 @@
 #define TESTLINUX_TCPCLIENT_H
 
 #include <utility>
+#include <sys/timerfd.h>
 
 #include "InAddr.h"
 #include "Codec.h"
@@ -50,7 +51,8 @@ public:
                 closeConnection(conn, nullptr);
                 return;
             } else if (n < 0) {
-                connErrorCallback_(conn);
+                if (connErrorCallback_)
+                    connErrorCallback_(conn);
                 Logger::sys("read error");
                 closeConnection(conn, nullptr);
                 return;
@@ -76,7 +78,8 @@ public:
             return;
         }
         // 销毁前先调用CloseCallback
-        connCloseCallback_(connection);
+        if (connCloseCallback_)
+            connCloseCallback_(connection);
         connection->destroy();
         // TcpConnection析构时调用Socket成员的析构函数，其中会close(sockfd)完成连接的关闭
         delete connection;
@@ -84,6 +87,24 @@ public:
         // FIXME: 假设唯一的一条连接断开时自动终止eventLoop
         loop_->stop();
         return;
+    }
+
+    void addTimedTask(uint32_t nextOccurTime, uint32_t intervalTime, std::function<void()> task) {
+        timespec nxtTime{.tv_sec = nextOccurTime / 1000, .tv_nsec = (nextOccurTime % 1000) * 1000000};
+        timespec interTime{.tv_sec = intervalTime / 1000, .tv_nsec = (intervalTime % 1000) * 1000000};
+        struct itimerspec spec{.it_interval = interTime, .it_value = nxtTime};
+        int timerfd = timerfd_create(CLOCK_MONOTONIC, 0);
+        if (timerfd_settime(timerfd, 0, &spec, nullptr) < 0)
+            Logger::sys("timerfd_settime error");
+
+        auto timerEvent = Event::make(timerfd, loop_->epoller());
+        auto readCallback = [timerfd = timerfd, task]() {
+            uint64_t tmp;
+            read(timerfd, &tmp, sizeof(tmp));
+            task();
+        };
+        timerEvent->setReadCallback(readCallback);
+        timerEvent->setReadable(true);
     }
 
     void join() {

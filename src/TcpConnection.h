@@ -13,6 +13,7 @@
 
 class TcpServer;
 
+const int IO_BUFFER_SIZE = 8192;
 class TcpConnection {
 
     TcpConnection(Socket socket, TcpSource *tcpSource, EventLoop *loop);
@@ -41,15 +42,15 @@ public:
         return new TcpConnection(std::move(connectedSokcet), tcpSource, loop);
     }
 
-    Buffer<8192> &readBuffer() {
+    Buffer<IO_BUFFER_SIZE> &readBuffer() {
         return readBuffer_;
     }
 
-    Buffer<8192> &writeBuffer() {
+    Buffer<IO_BUFFER_SIZE> &writeBuffer() {
         return writeBuffer_;
     }
 
-    // 像writeBuffer_中填充值并且调用send()来确保发送最终完成
+    // 向writeBuffer_中填充数据并且调用send()来确保发送最终完成
     void send(const char *str, size_t len) {
         if (state_ != State::ESTABLISHED)
             Logger::fatal("connection closed, can't send data!\n");
@@ -90,9 +91,9 @@ private:
     void sendNonblock();
 
 private:
-    Buffer<8192> readBuffer_, writeBuffer_; // read和write是相对于用户而言
+    Buffer<IO_BUFFER_SIZE> readBuffer_, writeBuffer_; // read和write是相对于用户而言
     Socket socket_;
-    bool isWillClose;
+    bool isWillClose_;
     std::function<void(TcpConnection*)>destoryCallback_ = nullptr; // only for FreeServerClient
     State state_;
     // 保存Tcpserver的引用是为了调用tcpServer_->closeConnection

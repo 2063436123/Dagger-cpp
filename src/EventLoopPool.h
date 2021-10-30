@@ -12,7 +12,7 @@ const int MAX_THREADS = std::thread::hardware_concurrency() * 2; // 64-bit macos
 
 class EventLoopPool {
 public:
-    EventLoopPool(EventLoop *single_loop) : single_loop_(single_loop), nextIndex_(0), loops_(MAX_THREADS), realSize_(0) {
+    explicit EventLoopPool(EventLoop *single_loop) : single_loop_(single_loop), nextIndex_(0), loops_(MAX_THREADS), realSize_(0) {
         // note EventLoop的上限由MAX_THREADS决定
 //        loops_.resize(MAX_THREADS); // 如果loops_的元素是不可移动（同时也不可拷贝）的，那么只能在构造函数中分配数组大小
         threads_.reserve(MAX_THREADS);

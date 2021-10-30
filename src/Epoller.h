@@ -16,7 +16,7 @@ class Event;
 
 class Epoller {
 public:
-    int epollId() {
+    int epollId() const {
         return epollfd_;
     }
 
@@ -43,6 +43,7 @@ public:
     thread_local static epoll_event evlist[MAX_EVENTS];
 private:
     // 保存Event，这是为了poll时能返回对应的Events
+    // todo shared_ptr是否会拖累性能？
     // 使用shared_ptr<Event>，以期节省空间并且自动管理生命期
     std::unordered_map<int, std::shared_ptr<Event>> eventList_;
     int epollfd_;

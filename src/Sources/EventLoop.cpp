@@ -19,7 +19,7 @@ void EventLoop::init() {
     if (wakeUpFd_ < 0)
         Logger::sys("eventfd error");
     auto wakeUpEvent = Event::make(wakeUpFd_, &epoller_);
-    wakeUpEvent->setReadCallback(std::bind(&EventLoop::readWakeUpFd, this));
+    wakeUpEvent->setReadCallback([this] { readWakeUpFd(); });
     wakeUpEvent->setReadable(true);
 
     looping_ = true;

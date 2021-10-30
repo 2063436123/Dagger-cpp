@@ -9,7 +9,7 @@
 
 
 TcpConnection::TcpConnection(Socket socket, TcpSource *tcpSource, EventLoop *loop) : socket_(std::move(socket)),
-                                                                                     state_(ESTABLISHED), isWillClose(false),
+                                                                                     state_(ESTABLISHED), isWillClose_(false),
                                                                                      tcpSource_(tcpSource),
                                                                                      loop_(loop) {}
 
@@ -19,13 +19,13 @@ void TcpConnection::sendNonblock() {
     if (writeBuffer_.readableBytes() == 0) {
         auto event = loop_->epoller()->getEvent(socket().fd());
         event->setWritable(false);
-        if (isWillClose) {
-            isWillClose = false;
+        if (isWillClose_) {
+            isWillClose_ = false;
             activeClose();
         }
         return;
     }
-    int n = ::write(socket().fd(), writeBuffer_.peek(),
+    ssize_t n = ::write(socket().fd(), writeBuffer_.peek(),
                     writeBuffer_.readableBytes());
     if (n == -1 && errno != EAGAIN)
         Logger::sys("nonblock write error");
@@ -34,10 +34,10 @@ void TcpConnection::sendNonblock() {
 
 void TcpConnection::send(bool isLast) {
     assert(writeBuffer_.readableBytes() > 0);
-    isWillClose = isLast;
+    isWillClose_ = isLast;
     std::shared_ptr<Event> event = loop_->epoller()->getEvent(socket_.fd());
     event->setWritable(true);
-    event->setWriteCallback(std::bind(&TcpConnection::sendNonblock, this));
+    event->setWriteCallback([this] { sendNonblock(); });
 }
 
 void TcpConnection::activeClose() {

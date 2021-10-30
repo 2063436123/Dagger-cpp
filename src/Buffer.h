@@ -15,7 +15,7 @@
 /**
  * / discarded / readable / writable /
  * */
-template<size_t N = 8192>
+template<size_t N>
 class Buffer {
 public:
     Buffer() : vec_(N), readIndex_(0), writeIndex_(0) {}
@@ -37,7 +37,7 @@ public:
     }
 
     // 当socket可读时，socket->buffer(writable)
-    ssize_t readFromSocket(Socket &s, size_t maxBytes = 4096) {
+    ssize_t readFromSocket(Socket &s, size_t maxBytes = 16384) {
         int connfd = s.fd();
         if (writableBytes() < maxBytes) {
             if (discardableBytes() >= maxBytes) {
@@ -47,7 +47,8 @@ public:
                 size_t newSize = std::max(vec_.size() * 2, maxBytes + readableBytes());
                 vec_.resize(newSize);
             }
-            memcpy(&vec_[0], &vec_[readIndex_], readableBytes());
+            if (readableBytes() > 0)
+                memcpy(&vec_[0], &vec_[readIndex_], readableBytes());
             writeIndex_ = readableBytes();
             readIndex_ = 0;
         }
@@ -64,7 +65,7 @@ public:
     }
 
     // 当socket可写时，buffer(readable)->socket
-    ssize_t writeToSocket(Socket &s, size_t maxBytes = 4096) {
+    ssize_t writeToSocket(Socket &s, size_t maxBytes = 16384) {
         int connfd = s.fd();
         // clog << "test1: " << std::min(readableBytes(), maxBytes) << "&" << std::string(peek(), std::min(readableBytes(), maxBytes));
         int n = ::write(connfd, peek(), std::min(readableBytes(), maxBytes));
@@ -82,12 +83,15 @@ public:
                 size_t newSize = std::max(vec_.size() * 2, len + readableBytes());
                 vec_.resize(newSize);
             }
-            memcpy(&vec_[0], &vec_[readIndex_], readableBytes());
+            // [cppreference] If either dest or src is an invalid or null pointer, the behavior is undefined, even if count is zero.
+            if (readableBytes() > 0)
+                memcpy(&vec_[0], &vec_[readIndex_], readableBytes());
             writeIndex_ = readableBytes();
             readIndex_ = 0;
         }
         memcpy(&vec_[writeIndex_], s, len);
         writeIndex_ += len;
+
         assert(writeIndex_ <= totalSize());
     }
 
@@ -121,14 +125,3 @@ private:
 typedef Buffer<512> SBuffer;
 typedef Buffer<4096> NBuffer;
 typedef Buffer<65536> LBuffer;
-
-//int main() {
-//    SBuffer buffer1;
-//    size_t appendSize;
-//    while (cin >> appendSize) {
-//        char *buf = new char[appendSize];
-//        buffer1.append(buf, appendSize);
-//        cout << "totalSize = " << buffer1.totalSize() << ", readableBytes = " << buffer1.readableBytes() <<
-//            ", writableBytes = " << buffer1.writableBytes() << endl;
-//    }
-//}

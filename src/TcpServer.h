@@ -172,7 +172,8 @@ private:
         connEvent->setReadCallback(bindCallback);
         connEvent->setReadable(true);
         // 回调EstablishedCallback()
-        connEstaCallback_(newConn);
+        if (connEstaCallback_)
+            connEstaCallback_(newConn);
     }
 
     // todo 对connections_的insert和erase操作都应该由mainThread来完成，参考muduo runInLoop.
@@ -186,7 +187,8 @@ private:
             return;
         }
         // 销毁前先调用CloseCallback
-        connCloseCallback_(connection);
+        if (connCloseCallback_)
+            connCloseCallback_(connection);
         connection->destroy();
 
         // todo 释放connection资源，由wheeling来（定时而非及时）释放资源哈哈

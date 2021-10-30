@@ -17,8 +17,7 @@ void whenMsgArrived(TcpConnection *conn) {
     // todo exit safely when bye
 
     auto &buf = conn->readBuffer();
-    cout << "read: " << std::string(buf.peek(), buf.readableBytes());
-
+//    cout << "read: " << std::string(buf.peek(), buf.readableBytes());
     conn->send(buf.peek(), buf.readableBytes());
 
     buf.retrieveAll();
@@ -37,7 +36,7 @@ void whenClose(TcpConnection *conn) {
 int i = 0;
 
 void taskPerSecond() {
-    cout << to_string(i++) << "second" << endl;
+    ++i;
 }
 
 int main() {
@@ -52,12 +51,13 @@ int main() {
     TcpServer server(std::move(s), InAddr("12345"), &loop,
                      Codec(Codec::UNLIMITED_MODEL, 0));
 
-    // 添加定时任务
-//    server.addTimedTask(1000, 2000, taskPerSecond);
-
+    // 添加事件回调
     server.setConnEstaCallback(whenNewConnectionEstablished);
     server.setConnMsgCallback(whenMsgArrived);
     server.setConnCloseCallback(whenClose);
+
+    // 添加定时任务
+    server.addTimedTask(1000, 1000, taskPerSecond);
 //    server.start();
     server.start(4);
 }

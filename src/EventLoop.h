@@ -54,12 +54,12 @@ public:
         // do sth...
     }
 
-    void readWakeUpFd() {
+    void readWakeUpFd() const {
         uint64_t tmp;
         read(wakeUpFd_, &tmp, sizeof(tmp));
     }
 
-    void writeWakeUpFd() {
+    void writeWakeUpFd() const {
         uint64_t tmp;
         write(wakeUpFd_, &tmp, sizeof(tmp));
     }
@@ -68,7 +68,7 @@ public:
         // runInLoop 目前还不需要加锁，因为只有main thread会每一秒调用一次该函数
         {
             std::lock_guard<SpinLock> lg(lock_);
-            tasks_.push_back(task);
+            tasks_.push_back(std::move(task));
         }
         // 打断eopller.poll()，否则在没有新事件到来时，这些task将饥饿
         if (!isInTaskHanding_) {

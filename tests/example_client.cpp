@@ -5,18 +5,15 @@
 #include "../src/TcpClient.h"
 
 void whenMsgArrived(TcpConnection *connection) {
-    auto buf = connection->readBuffer();
-    Logger::info("new msg: {}\n", std::string(buf.peek(), buf.readableBytes()));
-    std::string msg;
-    Logger::info("send msg? ");
+    // fixed: 之前用的是auto&，这导致修改的是buf的副本，retrieveAll()没有生效
+    auto& buf = connection->readBuffer();
+//    Logger::info("new msg: {}\n", std::string(buf.peek(), buf.readableBytes()));
     // todo 如何实现连接关闭时通知用户不要阻塞在getline上？
 
-    connection->socket().resetClose();
-    return;
     // BUG: 如果在等待用户输入的过程中，此连接被对端关闭，那么connection对象将会被自动delete，
     // 导致后面的connection->send中的段错误
-    std::getline(std::cin, msg);
-    connection->send(msg.c_str(), msg.size());
+    connection->send(buf.peek(), buf.readableBytes());
+    buf.retrieveAll();
 }
 
 void whenErrorOccur(TcpConnection *conn) {
