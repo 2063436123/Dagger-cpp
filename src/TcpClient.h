@@ -5,7 +5,10 @@
 #ifndef TESTLINUX_TCPCLIENT_H
 #define TESTLINUX_TCPCLIENT_H
 
+#include <utility>
+
 #include "InAddr.h"
+#include "Codec.h"
 #include "Logger.h"
 #include "Socket.h"
 #include "Buffer.h"
@@ -17,7 +20,7 @@
 class TcpClient : public TcpSource {
 public:
     // 一个实例对应一个客户
-    TcpClient(Socket clientfd, EventLoop *loop) : clientfd_(std::move(clientfd)), loop_(loop) {
+    TcpClient(Socket clientfd, EventLoop *loop, Codec codec) : clientfd_(std::move(clientfd)), loop_(loop), codec_(std::move(codec)) {
         loop_->init();
     }
 
@@ -52,7 +55,9 @@ public:
                 closeConnection(conn, nullptr);
                 return;
             }
-            connMsgCallback_(conn);
+            // todo: 添加codec处理
+            if (codec_.check(conn))
+                connMsgCallback_(conn);
         };
         event->setReadCallback(preConnMsgCallback);
         event->setReadable(true);
@@ -94,8 +99,8 @@ private:
     Socket clientfd_;
     EventLoop *loop_;
     std::thread backThread_; // 副线程运行EventLoop
+    Codec codec_;
     std::function<void(TcpConnection *)> connMsgCallback_, connCloseCallback_, connErrorCallback_;
-
 };
 
 #endif //TESTLINUX_TCPCLIENT_H

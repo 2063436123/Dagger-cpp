@@ -30,9 +30,8 @@ public:
 
     // todo 下面的参数是fd，epoller将从eventList中搜索出对应的shared_ptr<Event>，
     // 然后提取相关信息，并修改eventList或epoll_ctl.
-    // O(logN)X不对，tmd也是O(1)
-    // muduo方案，直接传Event*，因为外部变量（例如TcpConnection）
-    // 将持有Event对象，所以不需要智能指针haaha
+    // muduo方案：直接传Event*，因为外部变量（例如TcpConnection）
+    // 将持有Event对象，所以不需要智能指针
     void updateEvent(int fd);
 
     void removeEvent(int fd);

@@ -20,8 +20,10 @@ void whenConnClose(TcpConnection* conn) {
 int main() {
     EventLoop loop;
     FreeServerClient serverClient(&loop);
-    serverClient.createServerPort(InAddr("12344"), whenConnEsta, whenMsgArrived, whenConnClose, nullptr);
-    auto conn = serverClient.createClientConn(InAddr("12345"), whenConnEsta, whenMsgArrived, whenConnClose, nullptr);
+    serverClient.createServerPort(InAddr("12344"), Codec(Codec::UNLIMITED_MODEL, 0),
+                                  whenConnEsta, whenMsgArrived, whenConnClose, nullptr);
+    auto conn = serverClient.createClientConn(InAddr("12345"), Codec(Codec::UNLIMITED_MODEL, 0),
+                                              whenConnEsta, whenMsgArrived, whenConnClose, nullptr);
     conn->send("hello", 5);
     serverClient.start();
 }

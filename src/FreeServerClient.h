@@ -10,6 +10,7 @@
 #include "InAddr.h"
 #include "Socket.h"
 #include "EventLoopPool.h"
+#include "Codec.h"
 
 #ifdef IDLE_CONNECTIONS_MANAGER
 extern uint32_t timeInProcess; // counter for checking idle connections
@@ -32,7 +33,7 @@ public:
 
     using Func = std::function<void(TcpConnection *)>;
 
-    void createServerPort(InAddr addr, Func establishedCallback, Func messageCallback, Func destoryCallback,
+    void createServerPort(InAddr addr, Codec codec, Func establishedCallback, Func messageCallback, Func destoryCallback,
                           Func errorCallback) {
         serverfds_.push_back(Socket::makeNewSocket());
         auto &listenfd = serverfds_.back();
@@ -43,12 +44,12 @@ public:
 
         // todo 使用哪个loop？
         auto event = Event::make(listenfd.fd(), loop_->epoller());
-        event->setReadCallback(std::bind(&FreeServerClient::acceptCallback, this, listenfd.fd(), establishedCallback,
+        event->setReadCallback(std::bind(&FreeServerClient::acceptCallback, this, listenfd.fd(), codec, establishedCallback,
                                          messageCallback, destoryCallback, errorCallback));
         event->setReadable(true);
     }
 
-    TcpConnection* createClientConn(InAddr addr, Func establishedCallback, Func messageCallback, Func destoryCallback,
+    TcpConnection* createClientConn(InAddr addr, Codec codec, Func establishedCallback, Func messageCallback, Func destoryCallback,
                           Func errorCallback) {
         // todo 暂时用阻塞式connect连接
         // clientfd.setNonblock();
@@ -62,7 +63,7 @@ public:
         if (establishedCallback)
             establishedCallback(conn);
 
-        auto preConnMsgCallback = [conn, messageCallback, destoryCallback, errorCallback, this]() {
+        auto preConnMsgCallback = [conn, codec = std::move(codec), messageCallback, destoryCallback, errorCallback, this]() {
             ssize_t n = conn->readBuffer().readFromSocket(conn->socket());
             if (n == 0) {
                 // 对端关闭
@@ -74,8 +75,11 @@ public:
                 Logger::sys("read error");
                 return;
             }
-            if (messageCallback)
-                messageCallback(conn);
+            if (messageCallback) {
+                // todo: 添加codec处理
+                if (codec.check(conn))
+                    messageCallback(conn);
+            }
         };
         event->setReadCallback(preConnMsgCallback);
         event->setReadable(true);
@@ -140,7 +144,7 @@ private:
 #endif
 
     // for listenfd_, 此函数只会在main thread中执行，所以无race condition
-    void acceptCallback(int listenfd, Func establishedCallback, Func messageCallback, Func destoryCallback,
+    void acceptCallback(int listenfd, Codec codec, Func establishedCallback, Func messageCallback, Func destoryCallback,
                         Func errorCallback) {
         int connfd = ::accept(listenfd, nullptr, nullptr);
         if (connfd < 0) {
@@ -161,7 +165,7 @@ private:
         wheelPolicy_.addNewConnection(newConn);
 #endif
         Logger::info("newConn: {}\n", (void *) newConn);
-        auto bindCallback = [connection = newConn, messageCallback, destoryCallback, errorCallback, this]() {
+        auto bindCallback = [connection = newConn, codec = std::move(codec), messageCallback, destoryCallback, errorCallback, this]() {
             ssize_t n = connection->readBuffer().readFromSocket(connection->socket());
             if (n == 0) {
                 // eof
@@ -174,7 +178,8 @@ private:
 #ifdef IDLE_CONNECTIONS_MANAGER
             connection->lastReceiveTime = timeInProcess;
 #endif
-            messageCallback(connection);
+            if (codec.check(connection))
+                messageCallback(connection);
         };
         connEvent->setReadCallback(bindCallback);
         connEvent->setReadable(true);

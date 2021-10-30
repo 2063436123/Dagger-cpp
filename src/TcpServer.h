@@ -8,6 +8,8 @@
 //#define IDLE_CONNECTIONS_MANAGER
 
 #include <map>
+#include <sys/timerfd.h>
+#include "Codec.h"
 #include "Buffer.h"
 #include "Socket.h"
 #include "Event.h"
@@ -17,7 +19,6 @@
 #include "EventLoopPool.h"
 #include "TimeWheeling.h"
 #include "TcpSource.h"
-#include <sys/timerfd.h>
 
 #ifdef IDLE_CONNECTIONS_MANAGER
 extern uint32_t timeInProcess; // counter for checking idle connections
@@ -33,8 +34,8 @@ public:
     // 在使用 右值变量时还是 当成左值来用（只要有名字就是左值）.
     // 此处可用Socket或Socket&&来接受右值.
     // C++ Primer P478: 因为listenfd 是一个非引用参数，所以对它进行拷贝初始化 -> 左值使用拷贝构造函数，右值使用移动构造函数
-    TcpServer(Socket listenfd, InAddr addr, EventLoop *loop) : listenfd_(std::move(listenfd)), loop_(loop),
-                                                               pool_(loop) {
+    TcpServer(Socket listenfd, InAddr addr, EventLoop *loop, Codec codec) : listenfd_(std::move(listenfd)), loop_(loop),
+                                                               pool_(loop), codec_(std::move(codec)) {
         listenfd_.setReuseAddr();
         listenfd_.bindAddr(addr);
         listenfd_.setNonblock();
@@ -131,11 +132,17 @@ private:
             // eof
             closeConnection(connection, nullptr);
             return;
+        } else if (n < 0) {
+            Logger::sys("read from socket error");
+            closeConnection(connection, nullptr);
+            return;
         }
 #ifdef IDLE_CONNECTIONS_MANAGER
         connection->lastReceiveTime = timeInProcess;
 #endif
-        connMsgCallback_(connection);
+        // todo: 添加codec处理
+        if (codec_.check(connection))
+            connMsgCallback_(connection);
     }
 
     // for listenfd_, 此函数只会在main thread中执行，所以无race condition
@@ -194,6 +201,7 @@ private:
     Socket listenfd_;
     EventLoop *loop_; // for listenfd
     EventLoopPool pool_;
+    Codec codec_;
 #ifdef IDLE_CONNECTIONS_MANAGER
     TimerWheelingPolicy wheelPolicy_; // 提供一种策略，tcpserver每秒调用一次该策略来删除某些超时连接
 #endif

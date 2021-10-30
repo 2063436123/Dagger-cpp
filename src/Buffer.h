@@ -53,7 +53,12 @@ public:
         }
         assert(writableBytes() >= maxBytes);
         ssize_t n = ::read(connfd, &vec_[writeIndex_], maxBytes);
-        assert(n >= 0 && n <= maxBytes);
+//        assert(n >= 0 && n <= maxBytes);
+        // 当连接被异常终止时，n < 0
+        if (n < 0) {
+            Logger::sys("read from socket error");
+            return n;
+        }
         writeIndex_ += n;
         return n;
     }

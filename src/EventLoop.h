@@ -35,12 +35,12 @@ public:
 
             std::unique_lock<SpinLock> lg(lock_);
             curTask.swap(tasks_);
-            isInTaskHanding_ = false;
             assert(tasks_.empty());
             lg.unlock();
 
             for (const auto &task: curTask)
                 task();
+            isInTaskHanding_ = false;
         }
     }
 
@@ -66,8 +66,10 @@ public:
 
     void runInLoop(std::function<void()> task) {
         // runInLoop 目前还不需要加锁，因为只有main thread会每一秒调用一次该函数
-        std::lock_guard<SpinLock> lg(lock_);
-        tasks_.push_back(task);
+        {
+            std::lock_guard<SpinLock> lg(lock_);
+            tasks_.push_back(task);
+        }
         // 打断eopller.poll()，否则在没有新事件到来时，这些task将饥饿
         if (!isInTaskHanding_) {
             // wakeup

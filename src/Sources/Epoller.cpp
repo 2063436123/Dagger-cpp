@@ -77,14 +77,11 @@ void Epoller::removeEvent(int fd) {
 
 std::vector<std::shared_ptr<Event>> Epoller::poll(int timeout) {
     std::vector<std::shared_ptr<Event>> res;
-    con:
     int ret = epoll_wait(epollfd_, evlist, MAX_EVENTS, timeout);
-    if (ret < 0) {
+    if (ret < 0 && errno != EINTR) {
         Logger::sys("epoll_wait error");
+        return {};
     }
-
-    // fixed 之前addEvent()中插入eventList中的Event消失了
-    // fixed: 为什么eventList是空的？ 因为loops_数组移动位置了
 
     unique_lock<mutex> ul(getLock(epollId()));
     for (int i = 0; i < ret; i++) {

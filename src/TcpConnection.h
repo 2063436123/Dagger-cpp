@@ -90,7 +90,7 @@ private:
     void sendNonblock();
 
 private:
-    Buffer<8192> readBuffer_, writeBuffer_;
+    Buffer<8192> readBuffer_, writeBuffer_; // read和write是相对于用户而言
     Socket socket_;
     bool isWillClose;
     std::function<void(TcpConnection*)>destoryCallback_ = nullptr; // only for FreeServerClient
