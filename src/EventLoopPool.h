@@ -12,7 +12,8 @@ const int MAX_THREADS = std::thread::hardware_concurrency() * 2; // 64-bit macos
 
 class EventLoopPool {
 public:
-    explicit EventLoopPool(EventLoop *single_loop) : single_loop_(single_loop), nextIndex_(0), loops_(MAX_THREADS), realSize_(0) {
+    explicit EventLoopPool(EventLoop *single_loop) : single_loop_(single_loop), nextIndex_(0),
+    loops_(MAX_THREADS), realSize_(0) {
         // note EventLoop的上限由MAX_THREADS决定
 //        loops_.resize(MAX_THREADS); // 如果loops_的元素是不可移动（同时也不可拷贝）的，那么只能在构造函数中分配数组大小
         threads_.reserve(MAX_THREADS);
@@ -27,8 +28,7 @@ public:
 
     void threadFunc(int i) {
 //        std::unique_lock<std::mutex> ul(threadInitMutex_);
-        // fixed 问题在于loops_增长时会移动原来的元素，那么对它的this引用就会失效。
-        auto &loop = loops_[i]; // 线索，拷贝/移动未定义的问题吗？
+        auto &loop = loops_[i];
         // 每个线程直接运行EventLoop::start()，其中会执行Epoller::poll()，阻塞在epoll_wait上；
         // 得益于epoll对并发的支持，single_loop_可以在某一Epoller阻塞时向其中添加新的监听事件。
 //        ul.unlock();

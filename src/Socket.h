@@ -29,7 +29,9 @@ public:
         return Socket(connfd);
     }
 
-    Socket(Socket &&other) {
+    Socket(const Socket&) = delete;
+
+    Socket(Socket &&other)  noexcept {
         sockfd_ = other.sockfd_;
         other.sockfd_ = 0;
     }

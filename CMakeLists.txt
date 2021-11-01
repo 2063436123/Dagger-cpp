@@ -4,6 +4,7 @@ project(testLinux)
 set(CMAKE_CXX_STANDARD 20)
 
 link_libraries(pthread)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 include_directories(third_party/fmt_include)
 
 set(SRCS src/Sources/Socket.cpp
@@ -26,6 +27,17 @@ add_executable(free_server_client tests/FreeServerClient_test.cpp ${SRCS})
 # ping-pong
 add_executable(pingpong_server examples/ping-pong/server.cpp ${SRCS})
 add_executable(pingpong_client examples/ping-pong/client.cpp ${SRCS})
+add_executable(plain_server examples/ping-pong/plain_server.cpp ${SRCS})
 
 # buffer test
 add_executable(buffer_test tests/buffer_test.cpp ${SRCS})
+
+# ssl
+add_executable(ssl_client examples/secure-socket/ssl_client.cpp ${SRCS})
+target_link_libraries(ssl_client PUBLIC ssl crypto)
+add_executable(ssl_server examples/secure-socket/ssl_server.cpp ${SRCS})
+target_link_libraries(ssl_server PUBLIC ssl crypto)
+
+# asio
+add_executable(asio_server examples/asio/asio_server.cpp)
+add_executable(asio_multi_server examples/asio/asio_multi_server.cpp)

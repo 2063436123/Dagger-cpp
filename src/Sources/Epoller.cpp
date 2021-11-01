@@ -8,17 +8,18 @@
 #include <unistd.h>
 #include <cstring>
 #include <array>
+#include "../SpinLock.h"
 
 using namespace std;
 
-// note 怎么给eventList加锁，hash(epollerId)选择一个锁
-std::array<std::mutex, 5> g_mutexs;
+using Mutex = std::mutex;
+// note 减少锁争用，hash(epollerId)选择一个锁
+std::array<Mutex, 5> g_mutexs;
 
 // 类外初始化
 thread_local epoll_event Epoller::evlist[MAX_EVENTS];
 
-// note: 这里使用hash(epollerId)来选择使用的锁
-static std::mutex& getLock(int id) {
+static Mutex& getLock(int id) {
     return g_mutexs[(size_t)id % g_mutexs.size()];
 }
 
@@ -29,7 +30,8 @@ Epoller::Epoller() {
 }
 
 Epoller::~Epoller() = default;
-// !Epoller操作不需要加锁！
+// 即使一个Epoller只属于一个EventLoop，Epoller操作需要加锁，因为主线程和工作线程会有竞态条件
+
 void Epoller::addEvent(std::shared_ptr<Event> event) {
     struct epoll_event ev{.events = static_cast<uint32_t>(event->events()),
             .data = epoll_data_t{.fd = event->fd()}};
@@ -37,14 +39,14 @@ void Epoller::addEvent(std::shared_ptr<Event> event) {
     if (ret < 0)
         Logger::sys("epoll_ctl error");
 
-    lock_guard<mutex> lg(getLock(epollId()));
+     lock_guard<Mutex> lg(getLock(epollId()));
 
     if (!eventList_.insert({event->fd(), event}).second)
         Logger::fatal("insert error\n");
 }
 
 std::shared_ptr<Event> Epoller::getEvent(int fd) {
-    lock_guard<mutex> lg(getLock(epollId()));
+    lock_guard<Mutex> lg(getLock(epollId()));
     auto iter = eventList_.find(fd);
     if (iter == eventList_.end())
         return {};
@@ -71,7 +73,7 @@ void Epoller::removeEvent(int fd) {
     int ret = epoll_ctl(epollfd_, EPOLL_CTL_DEL, event->fd(), nullptr);
     if (ret < 0)
         Logger::sys("epoll_ctl error");
-    lock_guard<mutex> lg(getLock(epollId()));
+    lock_guard<Mutex> lg(getLock(epollId()));
     eventList_.erase(fd);
 }
 
@@ -83,7 +85,7 @@ std::vector<std::shared_ptr<Event>> Epoller::poll(int timeout) {
         return {};
     }
 
-    lock_guard<mutex> lg(getLock(epollId()));
+    lock_guard<Mutex> lg(getLock(epollId()));
     for (int i = 0; i < ret; i++) {
         auto iter = eventList_.find(evlist[i].data.fd);
         assert(iter != eventList_.end());

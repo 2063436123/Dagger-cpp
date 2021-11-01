@@ -85,7 +85,7 @@ public:
 
     // 启动EventLoop，开始监听listenfd和其他事件
     void start(size_t nums = 0) {
-        Logger::info("TcpServer starting...\n");
+        std::cout << ("TcpServer starting...\n") << std::endl;
         listenfd_.listen(4096);
         // note pool_.setHelperThreadsNumAndStart() 必须先于 loop_->start()
         pool_.setHelperThreadsNumAndStart(nums);

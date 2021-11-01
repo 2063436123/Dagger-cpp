@@ -10,7 +10,7 @@ std::atomic<uint64_t> bytes = 0;
 
 void whenMsgArrived(TcpConnection *conn) {
     auto &buf = conn->readBuffer();
-    bytes += buf.readableBytes();
+//    bytes += buf.readableBytes();
     conn->send(buf.peek(), buf.readableBytes());
 
     buf.retrieveAll();
@@ -39,6 +39,6 @@ int main() {
 
     server.setConnMsgCallback(whenMsgArrived);
 
-    server.addTimedTask(1000, 1000, taskPerSecond);
+//    server.addTimedTask(1000, 1000, taskPerSecond);
     server.start(0);
 }

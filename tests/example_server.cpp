@@ -28,7 +28,7 @@ void whenMsgArrived(TcpConnection *conn) {
 
 void whenClose(TcpConnection *conn) {
     Socket &s = conn->socket();
-    cout << "conn terminated! " << s.fd() << endl;
+    Logger::info("conn terminated! fd = {}\n", s.fd());
     // fixed 此时不该调用peerInAddr()，因为可能对端已经关闭了（当对端而非我端主动关闭时）
     // s.peerInAddr().ipPortStr() << " to " << s.localInAddr().ipPortStr() << endl;
 }
@@ -57,7 +57,7 @@ int main() {
     server.setConnCloseCallback(whenClose);
 
     // 添加定时任务
-    server.addTimedTask(1000, 1000, taskPerSecond);
+//    server.addTimedTask(1000, 1000, taskPerSecond);
 //    server.start();
-    server.start(4);
+    server.start(3);
 }
