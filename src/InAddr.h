@@ -35,7 +35,6 @@ public:
         initAddr(sin_port, sin_addr, sa_family);
     }
 
-
     std::string ipPortStr() const {
         char buf[INET_ADDRSTRLEN + 10];
         inet_ntop(addr_.sa_family, &((sockaddr_in *) &addr_)->sin_addr, buf, INET_ADDRSTRLEN);

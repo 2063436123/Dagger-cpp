@@ -17,8 +17,7 @@ void whenMsgArrived(TcpConnection *connection) {
     buf.retrieveAll();
 }
 
-const int N = 16 * 1024; // FIXME: N过大时，buffer报错out_of_range
-
+int N = 16 * 1024;
 
 void taskPerSecond() {
     ++i;
@@ -27,17 +26,24 @@ void taskPerSecond() {
          1.0 * oldBytes / 1024 / 1024 / 1 << "M/S\n";
 }
 
-int main() {
+// ./a.out threadNums connectionNums blockSize
+int main(int argc, char **argv) {
     EventLoop loop;
     TcpClient client(&loop, Codec(Codec::UNLIMITED_MODEL, 0));
 
     client.setConnMsgCallback(whenMsgArrived);
     client.addTimedTask(1, 1000, taskPerSecond);
-    client.addWorkerThreads(3);
+    if (argc > 1)
+        client.addWorkerThreads(atoi(argv[1]));
+    else
+        client.addWorkerThreads(3);
 
+    if (argc > 3)
+        N = atoi(argv[3]);
     std::string msg(N, ' ');
 
-    for (int i = 0; i < 100; i++) {
+    int connectionNums = (argc > 2) ? atoi(argv[2]) : 100;
+    for (int i = 0; i < connectionNums; i++) {
         auto conn = client.connect(InAddr("12345", "127.0.0.1"));
         conn->send(msg.c_str(), msg.size());
     }

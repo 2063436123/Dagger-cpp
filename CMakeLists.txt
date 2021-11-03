@@ -3,7 +3,7 @@ project(testLinux)
 
 set(CMAKE_CXX_STANDARD 20)
 
-link_libraries(pthread)
+link_libraries(pthread gtest)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 include_directories(third_party/fmt_include)
 
@@ -31,6 +31,15 @@ add_executable(plain_server examples/ping-pong/plain_server.cpp ${SRCS})
 
 # buffer test
 add_executable(buffer_test tests/buffer_test.cpp ${SRCS})
+
+# logger test
+add_executable(logger_test tests/logger_test.cpp ${SRCS})
+
+# inAddr test
+add_executable(inAddr_test tests/inAddr_test.cpp ${SRCS})
+
+# spinLock test
+add_executable(spinLock_test tests/spinLock_test.cpp)
 
 # ssl
 add_executable(ssl_client examples/secure-socket/ssl_client.cpp ${SRCS})

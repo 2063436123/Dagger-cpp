@@ -77,11 +77,11 @@ public:
 
     void setOutputFile(const char *filename, bool trunc);
 
-    template<typename... T>
-    void log(LogLevel logLevel, fmt::format_string<T...> fmt, T &&... args) {
-        std::string formattedString = vformat(fmt, fmt::make_format_args(args...));
-        log(logLevel, formattedString.data(), formattedString.size());
-    }
+//    template<typename... T>
+//    void log(LogLevel logLevel, fmt::format_string<T...> fmt, T &&... args) {
+//        std::string formattedString = vformat(fmt, fmt::make_format_args(args...));
+//        log(logLevel, formattedString.data(), formattedString.size());
+//    }
 
     void log(LogLevel level, const char *logline);
 

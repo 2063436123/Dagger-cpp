@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <thread>
 
 class SpinLock {
     const int kMaxActiveSpin = 5000;
@@ -43,7 +44,6 @@ public:
     }
 
     std::atomic<int> state = 0;
-    std::thread::id id1, id2;
 
     void unlock() {
         assert(lock_.load() == LOCKED);
