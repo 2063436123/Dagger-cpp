@@ -98,7 +98,7 @@ void Socket::setNonblock() {
 }
 
 void Socket::connect(const InAddr &peerAddr) {
-    if (::connect(sockfd_, peerAddr.sockAddr(), sizeof(peerAddr)) < 0)
+    if (::connect(sockfd_, peerAddr.sockAddr(), sizeof(peerAddr)) < 0 && errno != EINPROGRESS)
         Logger::sys("connect error");
 }
 

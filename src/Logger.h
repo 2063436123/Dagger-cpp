@@ -43,7 +43,6 @@ public:
 
     template<typename... T>
     static void info(fmt::format_string<T...> fmt, T &&... args) {
-        return;
         std::string formattedString = vformat(fmt, fmt::make_format_args(args...));
         get_logger().log(INFO, formattedString.data(), formattedString.size());
     }
@@ -58,7 +57,7 @@ public:
     static void sys(fmt::format_string<T...> fmt, T &&... args) {
         std::string formattedString = vformat(fmt, fmt::make_format_args(args...));
         formattedString += vformat(" because {}\n", fmt::make_format_args(strerror(errno)));
-        get_logger().log(FATAL, formattedString.data(), formattedString.size());
+        get_logger().log(ERROR, formattedString.data(), formattedString.size());
     }
 
     void sync() const {

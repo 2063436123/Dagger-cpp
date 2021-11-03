@@ -46,6 +46,7 @@ public:
         assert(event);
         event->setReadCallback(std::bind(&TcpServer::acceptCallback, this));
         event->setReadable(true);
+        listenEvent_ = event;
 
 #ifdef IDLE_CONNECTIONS_MANAGER
         createIdleConnTimer();
@@ -73,6 +74,7 @@ public:
         if (timerfd_settime(timerfd, 0, &spec, nullptr) < 0)
             Logger::sys("timerfd_settime error");
 
+        // fixme 内存泄漏，timerEvent
         auto timerEvent = Event::make(timerfd, loop_->epoller());
         auto readCallback = [timerfd = timerfd, task]() {
             uint64_t tmp;
@@ -95,6 +97,7 @@ public:
     void stop() {
         loop_->stop();
         // pool_.~EventLoopPool();
+        delete listenEvent_;
     }
 
 private:
@@ -159,7 +162,7 @@ private:
         auto connEvent = Event::make(connfd, ownerEventLoop->epoller());
 
         // 创建TcpConnection时自动设置NONBLOCK标志
-        auto newConn = TcpConnection::makeHeapObject(connfd, this, ownerEventLoop);
+        auto newConn = TcpConnection::makeHeapObject(connEvent, this, ownerEventLoop);
 #ifdef IDLE_CONNECTIONS_MANAGER
         newConn->lastReceiveTime = timeInProcess;
         wheelPolicy_.addNewConnection(newConn);
@@ -181,7 +184,7 @@ private:
         assert(destoryCallback == nullptr);
         // fixed: 确保数据被发送
         if (connection->writeBuffer().readableBytes() > 0) {
-            auto event = connection->eventLoop()->epoller()->getEvent(connection->socket().fd());
+            auto event = connection->event();
             event->setReadable(false);
             connection->send(true);
             return;
@@ -201,6 +204,7 @@ private:
 
 private:
     Socket listenfd_;
+    Event *listenEvent_; // to be deleted
     EventLoop *loop_; // for listenfd
     EventLoopPool pool_;
     Codec codec_;

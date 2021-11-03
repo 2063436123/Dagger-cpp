@@ -21,7 +21,8 @@
 class TcpClient : public TcpSource {
 public:
     // 一个实例对应一个客户
-    TcpClient(Socket clientfd, EventLoop *loop, Codec codec) : clientfd_(std::move(clientfd)), loop_(loop), codec_(std::move(codec)) {
+    TcpClient(EventLoop *loop, Codec codec) : loop_(loop),
+                                                               codec_(std::move(codec)), pool_(loop) {
         loop_->init();
     }
 
@@ -33,17 +34,24 @@ public:
         connCloseCallback_ = callback;
     }
 
-    void setConnErrorCallback(std::function<void(TcpConnection*)> callback) {
+    void setConnErrorCallback(std::function<void(TcpConnection *)> callback) {
         connErrorCallback_ = callback;
     }
 
-    TcpConnection* connect(InAddr addr) {
-        // todo 暂时用阻塞式connect连接
-        // clientfd.setNonblock();
-        clientfd_.connect(addr);
+    void addWorkerThreads(int nums) {
+        pool_.setHelperThreadsNumAndStart(nums);
+    }
 
-        auto event = Event::make(clientfd_.fd(), loop_->epoller());
-        auto conn = TcpConnection::makeHeapObject(clientfd_.fd(), this, loop_);
+    TcpConnection *connect(InAddr addr) {
+        clients_.push_back(Socket::makeNewSocket());
+        auto& clientfd = clients_.back();
+        // todo 暂时用阻塞式connect连接
+        clientfd.setNonblock();
+        clientfd.connect(addr);
+
+        EventLoop* loop = pool_.getNextPool();
+        auto event = Event::make(clientfd.fd(), loop->epoller());
+        auto conn = TcpConnection::makeHeapObject(event, this, loop);
         auto preConnMsgCallback = [conn, this]() {
             ssize_t n = conn->readBuffer().readFromSocket(conn->socket());
             if (n == 0) {
@@ -64,15 +72,14 @@ public:
         event->setReadCallback(preConnMsgCallback);
         event->setReadable(true);
 
-        backThread_ = std::thread(&EventLoop::start, loop_);
         return conn;
     }
 
     // 关闭连接，在 read返回0 或 客户调用activeClose 时被调用
-    void closeConnection(TcpConnection *connection, std::function<void(TcpConnection*)> destoryCallback) override {
+    void closeConnection(TcpConnection *connection, std::function<void(TcpConnection *)> destoryCallback) override {
         assert(destoryCallback == nullptr);
         if (connection->writeBuffer().readableBytes() > 0) {
-            auto event = connection->eventLoop()->epoller()->getEvent(connection->socket().fd());
+            auto event = connection->event();
             event->setReadable(false);
             connection->send(true);
             return;
@@ -83,10 +90,6 @@ public:
         connection->destroy();
         // TcpConnection析构时调用Socket成员的析构函数，其中会close(sockfd)完成连接的关闭
         delete connection;
-
-        // FIXME: 假设唯一的一条连接断开时自动终止eventLoop
-        loop_->stop();
-        return;
     }
 
     void addTimedTask(uint32_t nextOccurTime, uint32_t intervalTime, std::function<void()> task) {
@@ -108,18 +111,21 @@ public:
     }
 
     void join() {
-        backThread_.join();
+        loop_->start();
+    }
+
+    void stop() {
+        loop_->stop();
     }
 
     ~TcpClient() {
-        if (backThread_.joinable())
-            backThread_.join();
+        // pool_.~EventLoopPool()
     }
 
 private:
-    Socket clientfd_;
+    std::vector<Socket> clients_;
     EventLoop *loop_;
-    std::thread backThread_; // 副线程运行EventLoop
+    EventLoopPool pool_;
     Codec codec_;
     std::function<void(TcpConnection *)> connMsgCallback_, connCloseCallback_, connErrorCallback_;
 };

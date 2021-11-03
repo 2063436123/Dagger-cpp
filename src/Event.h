@@ -16,9 +16,8 @@ private:
 
 public:
     // 注意：make时已将event添加到epoller的监听列表中
-    static std::shared_ptr<Event> make(int fd, Epoller *epoller) {
-        auto event = std::shared_ptr<Event>(new Event(fd, epoller));
-        assert(event);
+    static Event* make(int fd, Epoller *epoller) {
+        Event *event = new Event(fd, epoller);
         epoller->addEvent(event);
         return event;
     }
@@ -40,7 +39,7 @@ public:
         } else {
             events_ &= ~onFlag;
         }
-        epoller_->updateEvent(fd());
+        epoller_->updateEvent(this);
     }
 
     void setWritable(bool on) {
@@ -50,7 +49,7 @@ public:
         } else {
             events_ &= ~onFlag;
         }
-        epoller_->updateEvent(fd());
+        epoller_->updateEvent(this);
     }
 
     void setErrorable(bool on) {
@@ -60,7 +59,7 @@ public:
         } else {
             events_ &= ~onFlag;
         }
-        epoller_->updateEvent(fd());
+        epoller_->updateEvent(this);
     }
 
     void setReadCallback(std::function<void()> readCallback) {
@@ -85,11 +84,11 @@ public:
             errorCallback_();
             return;
         }
-        if ((revents_ & EPOLLIN || revents_ & EPOLLPRI) && readCallback_) {
+        if ((revents_ & EPOLLIN || revents_ & EPOLLPRI || revents_ & EPOLLRDNORM) && readCallback_) {
             readCallback_();
             return;
         }
-        if ((revents_ & EPOLLOUT) && writeCallback_) {
+        if ((revents_ & EPOLLOUT || revents_ & EPOLLWRNORM) && writeCallback_) {
             writeCallback_();
             return;
         }
@@ -97,7 +96,6 @@ public:
             closeCallback_();
             return;
         }
-        Logger::fatal("revents {} can't be recognized!", revents_);
     }
 
 private:

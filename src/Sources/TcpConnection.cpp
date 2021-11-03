@@ -8,17 +8,21 @@
 #include "../TcpServer.h"
 
 
-TcpConnection::TcpConnection(Socket socket, TcpSource *tcpSource, EventLoop *loop) : socket_(std::move(socket)),
-                                                                                     state_(ESTABLISHED), isWillClose_(false),
-                                                                                     tcpSource_(tcpSource),
-                                                                                     loop_(loop) {}
+TcpConnection::TcpConnection(Event *event, TcpSource *tcpSource, EventLoop *loop) : event_(event),
+                                                                                    socket_(Socket::makeConnected(
+                                                                                            event_->fd())),
+                                                                                    state_(ESTABLISHED),
+                                                                                    isWillClose_(false),
+                                                                                    tcpSource_(tcpSource),
+                                                                                    loop_(loop) {
+    socket_.setNonblock();
+}
 
 void TcpConnection::sendNonblock() {
     // user -> buffer(writable)
     // buffer(readable) -> socket
     if (writeBuffer_.readableBytes() == 0) {
-        auto event = loop_->epoller()->getEvent(socket().fd());
-        event->setWritable(false);
+        event_->setWritable(false);
         if (isWillClose_) {
             isWillClose_ = false;
             activeClose();
@@ -26,7 +30,7 @@ void TcpConnection::sendNonblock() {
         return;
     }
     ssize_t n = ::write(socket().fd(), writeBuffer_.peek(),
-                    writeBuffer_.readableBytes());
+                        writeBuffer_.readableBytes());
     if (n == -1 && errno != EAGAIN)
         Logger::sys("nonblock write error");
     writeBuffer_.retrieve(n);
@@ -35,9 +39,8 @@ void TcpConnection::sendNonblock() {
 void TcpConnection::send(bool isLast) {
     assert(writeBuffer_.readableBytes() > 0);
     isWillClose_ = isLast;
-    std::shared_ptr<Event> event = loop_->epoller()->getEvent(socket_.fd());
-    event->setWritable(true);
-    event->setWriteCallback([this] { sendNonblock(); });
+    event_->setWritable(true);
+    event_->setWriteCallback([this] { sendNonblock(); });
 }
 
 void TcpConnection::activeClose() {

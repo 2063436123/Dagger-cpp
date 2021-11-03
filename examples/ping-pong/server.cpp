@@ -20,8 +20,7 @@ int i = 0;
 
 void taskPerSecond() {
     ++i;
-    int oldBytes = bytes;
-    bytes = 0;
+    uint64_t oldBytes = bytes.fetch_and(0);
     cout << oldBytes / 1024 << "K, " << i << "S, speed: " << 1.0 * oldBytes / 1024 / 1024 / 1 << "M/S\n";
 }
 
@@ -40,5 +39,5 @@ int main() {
     server.setConnMsgCallback(whenMsgArrived);
 
 //    server.addTimedTask(1000, 1000, taskPerSecond);
-    server.start(0);
+    server.start(3);
 }

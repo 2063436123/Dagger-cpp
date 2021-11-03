@@ -16,11 +16,11 @@ class TcpServer;
 const int IO_BUFFER_SIZE = 8192;
 class TcpConnection {
 
-    TcpConnection(Socket socket, TcpSource *tcpSource, EventLoop *loop);
+    TcpConnection(Event *event, TcpSource *tcpSource, EventLoop *loop);
 
 public:
     // lastReceiveTime: used by TimeWheelingPolicy, updated when inited or new message arrived
-    uint32_t lastReceiveTime;
+    uint32_t lastReceiveTime{};
 
     enum State {
         BLANK, ESTABLISHED, CLOSED
@@ -30,16 +30,12 @@ public:
         return state_;
     }
 
-    static TcpConnection make(int connfd, TcpSource *tcpSource, EventLoop *loop) {
-        Socket connectedSokcet = Socket::makeConnected(connfd);
-        connectedSokcet.setNonblock();
-        return TcpConnection(std::move(connectedSokcet), tcpSource, loop);
+    static TcpConnection make(Event *event, TcpSource *tcpSource, EventLoop *loop) {
+        return TcpConnection(event, tcpSource, loop);
     }
 
-    static TcpConnection* makeHeapObject(int connfd, TcpSource *tcpSource, EventLoop *loop) {
-        Socket connectedSokcet = Socket::makeConnected(connfd);
-        connectedSokcet.setNonblock();
-        return new TcpConnection(std::move(connectedSokcet), tcpSource, loop);
+    static TcpConnection* makeHeapObject(Event *event, TcpSource *tcpSource, EventLoop *loop) {
+        return new TcpConnection(event, tcpSource, loop);
     }
 
     Buffer<IO_BUFFER_SIZE> &readBuffer() {
@@ -61,6 +57,10 @@ public:
     // 确保非阻塞地及时发送writeBuffer_中所有值
     void send(bool isLast = false);
 
+    Event* event() {
+        return event_;
+    }
+
     Socket &socket() {
         return socket_;
     }
@@ -72,7 +72,8 @@ public:
     void destroy() {
         // todo 补充点什么
         state_ = CLOSED;
-        loop_->epoller()->removeEvent(socket().fd());
+        loop_->epoller()->removeEvent(event_);
+        delete event_;
     }
 
     void setDestoryCallback(std::function<void(TcpConnection*)> destoryCallback) {
@@ -92,6 +93,7 @@ private:
 
 private:
     Buffer<IO_BUFFER_SIZE> readBuffer_, writeBuffer_; // read和write是相对于用户而言
+    Event* event_; // 当前连接对应的epoller中的event，todo 记得delete
     Socket socket_;
     bool isWillClose_;
     std::function<void(TcpConnection*)>destoryCallback_ = nullptr; // only for FreeServerClient

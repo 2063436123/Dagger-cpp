@@ -59,7 +59,7 @@ public:
 
         // todo 使用哪个loop？
         auto event = Event::make(clientfd.fd(), loop_->epoller());
-        auto conn = TcpConnection::makeHeapObject(clientfd.fd(), this, loop_);
+        auto conn = TcpConnection::makeHeapObject(event, this, loop_);
         if (establishedCallback)
             establishedCallback(conn);
 
@@ -158,7 +158,7 @@ private:
         auto connEvent = Event::make(connfd, ownerEventLoop->epoller());
 
         // 创建TcpConnection时自动设置NONBLOCK标志
-        auto newConn = TcpConnection::makeHeapObject(connfd, this, ownerEventLoop);
+        auto newConn = TcpConnection::makeHeapObject(connEvent, this, ownerEventLoop);
         newConn->setDestoryCallback(destoryCallback);
 #ifdef IDLE_CONNECTIONS_MANAGER
         newConn->lastReceiveTime = timeInProcess;
@@ -192,7 +192,7 @@ private:
     void closeConnection(TcpConnection *connection, Func destoryCallback) override {
         // fixed: 确保数据被发送
         if (connection->writeBuffer().readableBytes() > 0) {
-            auto event = connection->eventLoop()->epoller()->getEvent(connection->socket().fd());
+            auto event = connection->event();
             event->setReadable(false);
             connection->send(true);
             return;

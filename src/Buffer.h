@@ -37,7 +37,8 @@ public:
     }
 
     // 当socket可读时，socket->buffer(writable)
-    ssize_t readFromSocket(Socket &s, size_t maxBytes = 16384) {
+    // @return 只能表示异常情况，不表示实际读取的字节数
+    ssize_t readFromSocket(Socket &s, size_t maxBytes = 4096) {
         int connfd = s.fd();
         if (writableBytes() < maxBytes) {
             if (discardableBytes() >= maxBytes) {
@@ -54,18 +55,22 @@ public:
         }
         assert(writableBytes() >= maxBytes);
         ssize_t n = ::read(connfd, &vec_[writeIndex_], maxBytes);
-//        assert(n >= 0 && n <= maxBytes);
-        // 当连接被异常终止时，n < 0
         if (n < 0) {
-            Logger::sys("read from socket error");
-            return n;
+            if (errno != EINTR) {
+                Logger::sys("read from socket error");
+                return n;
+            }
+            return 1; // return > 0表示没有异常
         }
         writeIndex_ += n;
+        if (n == maxBytes) {
+            readFromSocket(s, maxBytes * 2);
+        }
         return n;
     }
 
     // 当socket可写时，buffer(readable)->socket
-    ssize_t writeToSocket(Socket &s, size_t maxBytes = 16384) {
+    ssize_t writeToSocket(Socket &s, size_t maxBytes = 4096) {
         int connfd = s.fd();
         // clog << "test1: " << std::min(readableBytes(), maxBytes) << "&" << std::string(peek(), std::min(readableBytes(), maxBytes));
         int n = ::write(connfd, peek(), std::min(readableBytes(), maxBytes));
