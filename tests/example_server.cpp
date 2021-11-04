@@ -40,9 +40,6 @@ void taskPerSecond() {
 }
 
 int main() {
-    if (Options::setMaxFiles(1048576) < 0)
-        Logger::sys("getMaxFiles error");
-    Options::getMaxFiles();
 //    Options::setTcpRmem(1024);
 //    Options::setTcpWmem(1024);
 
@@ -58,6 +55,5 @@ int main() {
 
     // 添加定时任务
 //    server.addTimedTask(1000, 1000, taskPerSecond);
-//    server.start();
     server.start(3);
 }

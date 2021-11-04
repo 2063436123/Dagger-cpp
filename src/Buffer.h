@@ -100,11 +100,17 @@ public:
         assert(writeIndex_ <= totalSize());
     }
 
+    // 可以基于const属性来重载成员函数
+    char *peek() {
+        return &vec_[readIndex_];
+    }
+
     const char *peek() const {
         return &vec_[readIndex_];
     }
 
     const char *retrieve(size_t len) {
+        assert(len <= readableBytes());
         const char *ret = &vec_[readIndex_];
         if (readIndex_ + len > writeIndex_)
             return nullptr;

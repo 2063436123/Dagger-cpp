@@ -154,7 +154,6 @@ private:
         }
 
         auto ownerEventLoop = pool_.getNextPool();
-        Logger::info("accept, address of eventLoop: {} and the new connfd: {}\n", (void *) ownerEventLoop, connfd);
         auto connEvent = Event::make(connfd, ownerEventLoop->epoller());
 
         // 创建TcpConnection时自动设置NONBLOCK标志
@@ -164,7 +163,6 @@ private:
         newConn->lastReceiveTime = timeInProcess;
         wheelPolicy_.addNewConnection(newConn);
 #endif
-        Logger::info("newConn: {}\n", (void *) newConn);
         auto bindCallback = [connection = newConn, codec = std::move(codec), messageCallback, destoryCallback, errorCallback, this]() {
             ssize_t n = connection->readBuffer().readFromSocket(connection->socket());
             if (n == 0) {

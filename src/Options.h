@@ -13,6 +13,20 @@
 #include "Logger.h"
 #include <cassert>
 
+#if __GNUC__
+#if __x86_64__ || __ppc64__
+#define ENVIRONMENT64
+#else
+#define ENVIRONMENT32
+#endif
+#endif
+
+// 定义DataType是为了兼容32/64位平台，这样就可以安全地在void*和integer_type之间转换
+#ifdef ENVIRONMENT64
+using DataType = uint64_t;
+#elif
+using DataType = uint32_t;
+#endif
 
 class Options {
 public:

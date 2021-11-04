@@ -5,6 +5,8 @@
 #ifndef TESTLINUX_TCPCONNECTION_H
 #define TESTLINUX_TCPCONNECTION_H
 
+#include <utility>
+
 #include "Buffer.h"
 #include "Event.h"
 #include "Epoller.h"
@@ -46,6 +48,14 @@ public:
         return writeBuffer_;
     }
 
+    void* data() {
+        return data_;
+    }
+
+    void setData(void* ptr) {
+        data_ = ptr;
+    }
+
     // 向writeBuffer_中填充数据并且调用send()来确保发送最终完成
     void send(const char *str, size_t len) {
         if (state_ != State::ESTABLISHED)
@@ -77,7 +87,7 @@ public:
     }
 
     void setDestoryCallback(std::function<void(TcpConnection*)> destoryCallback) {
-        destoryCallback_ = destoryCallback;
+        destoryCallback_ = std::move(destoryCallback);
     }
 
     void activeClose();
@@ -93,10 +103,11 @@ private:
 
 private:
     Buffer<IO_BUFFER_SIZE> readBuffer_, writeBuffer_; // read和write是相对于用户而言
+    void *data_ = nullptr;
     Event* event_; // 当前连接对应的epoller中的event，todo 记得delete
     Socket socket_;
     bool isWillClose_;
-    std::function<void(TcpConnection*)>destoryCallback_ = nullptr; // only for FreeServerClient
+    std::function<void(TcpConnection*)>destoryCallback_; // only for FreeServerClient
     State state_;
     // 保存Tcpserver的引用是为了调用tcpServer_->closeConnection
     TcpSource *tcpSource_;

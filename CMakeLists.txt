@@ -22,9 +22,9 @@ add_executable(example_server tests/example_server.cpp ${SRCS})
 add_executable(example_client tests/example_client.cpp ${SRCS})
 
 # free_server_client test
-add_executable(free_server_client tests/FreeServerClient_test.cpp ${SRCS})
+add_executable(free_server_client tests/FreeServerClient.cpp ${SRCS})
 
-# ping-pong
+# ping-pong test
 add_executable(pingpong_server examples/ping-pong/server.cpp ${SRCS})
 add_executable(pingpong_client examples/ping-pong/client.cpp ${SRCS})
 add_executable(plain_server examples/ping-pong/plain_server.cpp ${SRCS})
@@ -50,3 +50,6 @@ target_link_libraries(ssl_server PUBLIC ssl crypto)
 # asio
 add_executable(asio_server examples/asio/asio_server.cpp)
 add_executable(asio_multi_server examples/asio/asio_multi_server.cpp)
+
+# http
+add_executable(http_server tests/simple_http.cpp ${SRCS})
