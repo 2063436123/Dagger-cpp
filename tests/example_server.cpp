@@ -17,10 +17,15 @@ void whenMsgArrived(TcpConnection *conn) {
     // todo exit safely when bye
 
     auto &buf = conn->readBuffer();
-//    cout << "read: " << std::string(buf.peek(), buf.readableBytes());
-    conn->send(buf.peek(), buf.readableBytes());
-
+//    conn->send(buf.peek(), buf.readableBytes());
+    std::string response_str("HTTP/1.1 200 OK\r\n"
+                             "content-type: text/html; charset=utf-8\r\n"
+                             "content-length: 49\r\n"
+                             "connection: close\r\n"
+                             "\r\n"
+                             "<title>The Service haven't been provided.</title>\r\n");
     buf.retrieveAll();
+    conn->send(response_str.c_str(), response_str.size());
     // 如果不开启IDLE_CONNECTIONS_MANAGER，那么要么等待对端主动关闭（可能无限等待），要么在这里主动关闭。
     conn->activeClose();
 //    conn->socket().resetClose();
@@ -28,7 +33,7 @@ void whenMsgArrived(TcpConnection *conn) {
 
 void whenClose(TcpConnection *conn) {
     Socket &s = conn->socket();
-    Logger::info("conn terminated! fd = {}\n", s.fd());
+    //Logger::info("conn terminated! fd = {}\n", s.fd());
     // fixed 此时不该调用peerInAddr()，因为可能对端已经关闭了（当对端而非我端主动关闭时）
     // s.peerInAddr().ipPortStr() << " to " << s.localInAddr().ipPortStr() << endl;
 }

@@ -80,6 +80,7 @@ public:
 private:
     void async_read() {
         auto self(shared_from_this());
+
         socket_.async_read_some(buffer(data_),
                                 [this, self](const boost::system::error_code &ec, size_t bytes_transferred) {
                                     if (!ec)
@@ -89,12 +90,18 @@ private:
 
     void async_write(std::size_t length) {
         auto self(shared_from_this());
-        boost::asio::async_write(socket_, buffer(data_, length),
+        std::string data = "HTTP/1.1 200 OK\r\n"
+                           "content-type: text/html; charset=utf-8\r\n"
+                           "content-length: 49\r\n"
+                           "connection: close\r\n"
+                           "\r\n"
+                           "<title>The Service haven't been provided.</title>\r\n";
+        boost::asio::async_write(socket_, buffer(data.c_str(), data.size()),
                                  [this, self](const boost::system::error_code &ec, size_t) {
-                        // 1. for ping-pong
+                                     // 1. for ping-pong
 //                                     if (!ec)
 //                                         async_read();
-                        // 2. for webbench
+                                     // 2. for webbench
                                      socket_.close();
                                  });
     }

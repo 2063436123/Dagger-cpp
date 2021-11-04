@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <iostream>
+#include "ObjectPool.hpp"
 #include "Epoller.h"
 
 class Event {
@@ -13,11 +14,13 @@ private:
     Event(int fd, Epoller *epoller) : fd_(fd),
                                       events_(0), revents_(0), epoller_(epoller) {
     }
-
+    template<typename T, typename... Args>
+    friend T* ObjectPool::getNewObject(Args &&...);
 public:
+
     // 注意：make时已将event添加到epoller的监听列表中
-    static Event* make(int fd, Epoller *epoller) {
-        Event *event = new Event(fd, epoller);
+    static Event *make(int fd, Epoller *epoller) {
+        Event *event = ObjectPool::getNewObject<Event>(fd, epoller);
         epoller->addEvent(event);
         return event;
     }
@@ -29,6 +32,10 @@ public:
     void setEvents(int events) { events_ = events; }
 
     int revents() const { return revents_; }
+
+    bool isWritable() const {
+        return EPOLLOUT & events_;
+    }
 
     void setRevents(int revents) { revents_ = revents; }
 

@@ -52,8 +52,11 @@ int Socket::accept(InAddr &peerAddr) {
 
 int Socket::accept() {
     int connfd_ = ::accept(sockfd_, nullptr, nullptr);
-    if (connfd_ < 0)
+    if (connfd_ < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EPROTO || errno == ECONNABORTED)
+            return connfd_;
         Logger::sys("accept error");
+    }
     return connfd_;
 }
 
@@ -84,7 +87,7 @@ void Socket::resetClose() {
     linger lr{.l_onoff = 1, .l_linger = 0};
     if (setsockopt(sockfd_, SOL_SOCKET, SO_LINGER, &lr, sizeof(lr)) < 0)
         Logger::sys("setsockopt SO_LINGER error");
-    close(sockfd_);
+    ::close(sockfd_);
     sockfd_ = 0;
 }
 
@@ -100,6 +103,12 @@ void Socket::setNonblock() {
 void Socket::connect(const InAddr &peerAddr) {
     if (::connect(sockfd_, peerAddr.sockAddr(), sizeof(peerAddr)) < 0 && errno != EINPROGRESS)
         Logger::sys("connect error");
+}
+
+void Socket::setQuickAck() {
+    socklen_t a = 1;
+    if (setsockopt(sockfd_, IPPROTO_TCP, TCP_QUICKACK, &a, sizeof(a)) < 0)
+        Logger::sys("setsockopt error");
 }
 
 //int main() {

@@ -134,7 +134,7 @@ private:
                 std::string body("<!DOCTYPE html>\n"
                                  "<html>\n"
                                  "<head>\n"
-                                 "<title>Welcome to nginx!</title>\n"
+                                 "<title>Welcome to Dagger!</title>\n"
                                  "<style>\n"
                                  "body {\n"
                                  "width: 35em;\n"

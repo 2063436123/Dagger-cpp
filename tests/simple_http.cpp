@@ -2,12 +2,16 @@
 // Created by Hello Peter on 2021/11/3.
 //
 #include "../src/HttpServer.h"
-
-//extern std::atomic<uint64_t> sendWhenCloseCnts;
-//extern std::atomic<uint64_t> totalConnectionsCnts;
-//extern std::atomic<uint64_t> totalReadableCnts;
+//
+ uint64_t newConnRequests;
+ uint64_t reuseRequests;
+ uint64_t runtimeConnNums;
+ uint64_t recoveryConnNums;
 
 int main() {
+    ObjectPool::addObjectCache<TcpConnection>(10000);
+    ObjectPool::addObjectCache<Event>(10000);
+
     HttpServer server(InAddr("15558"));
     server.addServiceHandler("/port", [](TcpConnection *conn) {
         HttpResponse response;
@@ -17,11 +21,13 @@ int main() {
     });
     server.addServiceHandler("/perf", [](TcpConnection *conn) {
         HttpResponse response;
-        // todo
+        std::string body(fmt::format("{} {} {} {}", newConnRequests, reuseRequests, runtimeConnNums, recoveryConnNums));
+        response.addBody(body);
         std::string res = response.to_string();
         conn->send(res.c_str(), res.size());
     });
 
+
     // 开启多线程后性能下降好几倍？
-    server.start(0);
+    server.start(3);
 }

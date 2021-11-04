@@ -38,7 +38,7 @@ public:
 
     ~Socket() {
         if (sockfd_ != 0)
-            close(sockfd_);
+            ::close(sockfd_);
     }
 
     int fd() const {
@@ -68,6 +68,8 @@ public:
     void setReuseAddr();
 
     void setReusePort();
+
+    void setQuickAck();
 
     void resetClose();
 

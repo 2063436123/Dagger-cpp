@@ -12,12 +12,14 @@
 #include "Epoller.h"
 #include "EventLoop.h"
 #include "TcpSource.h"
+//#include "ObjectPool.hpp"
 
 class TcpServer;
 
 const int IO_BUFFER_SIZE = 8192;
 class TcpConnection {
-
+    template<typename T, typename... Args>
+    friend T* ObjectPool::getNewObject(Args &&...);
     TcpConnection(Event *event, TcpSource *tcpSource, EventLoop *loop);
 
 public:
@@ -37,7 +39,9 @@ public:
     }
 
     static TcpConnection* makeHeapObject(Event *event, TcpSource *tcpSource, EventLoop *loop) {
-        return new TcpConnection(event, tcpSource, loop);
+        // todo 从连接池拿取新连接，除非连接池已空才使用new
+        return ObjectPool::getNewObject<TcpConnection>(event, tcpSource, loop);
+        //return new TcpConnection(event, tcpSource, loop);
     }
 
     Buffer<IO_BUFFER_SIZE> &readBuffer() {
@@ -83,7 +87,7 @@ public:
         // todo 补充点什么
         state_ = CLOSED;
         loop_->epoller()->removeEvent(event_);
-        delete event_;
+        ObjectPool::returnObject<Event>(event_);
     }
 
     void setDestoryCallback(std::function<void(TcpConnection*)> destoryCallback) {

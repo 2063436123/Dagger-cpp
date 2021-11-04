@@ -24,6 +24,8 @@
 extern uint32_t timeInProcess; // counter for checking idle connections
 #endif
 
+ObjectPool &getObjectPool();
+
 const int REAL_SECONDS_PER_VIRTUAL_SECOND = 1;
 
 // 单线程TcpServer
@@ -35,12 +37,13 @@ public:
     // 此处可用Socket或Socket&&来接受右值.
     // C++ Primer P478: 因为listenfd 是一个非引用参数，所以对它进行拷贝初始化 -> 左值使用拷贝构造函数，右值使用移动构造函数
     TcpServer(Socket listenfd, InAddr addr, EventLoop *loop, Codec codec) : listenfd_(std::move(listenfd)), loop_(loop),
-                                                               pool_(loop), codec_(std::move(codec)) {
+                                                                            pool_(loop), codec_(std::move(codec)) {
         // for performance
         if (Options::setMaxFiles(1048576) < 0)
             Logger::sys("getMaxFiles error");
 
         listenfd_.setReuseAddr();
+        listenfd_.setReusePort();
         listenfd_.bindAddr(addr);
         listenfd_.setNonblock();
 
@@ -154,35 +157,35 @@ private:
 
     // for listenfd_, 此函数只会在main thread中执行，所以无race condition
     void acceptCallback() {
-        int connfd = ::accept(listenfd_.fd(), nullptr, nullptr);
-        if (connfd < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EPROTO || errno == ECONNABORTED)
-                return;
-            Logger::sys("accept error");
-        }
+        int connfd;
+        do {
+            // 尽可能多地在一次accept回调中收集新连接
+            connfd = listenfd_.accept();
+            if (connfd <= 0)
+                break;
+            auto ownerEventLoop = pool_.getNextPool();
+            auto connEvent = Event::make(connfd, ownerEventLoop->epoller());
 
-        auto ownerEventLoop = pool_.getNextPool();
-        auto connEvent = Event::make(connfd, ownerEventLoop->epoller());
-
-        // 创建TcpConnection时自动设置NONBLOCK标志
-        auto newConn = TcpConnection::makeHeapObject(connEvent, this, ownerEventLoop);
+            // 创建TcpConnection时自动设置NONBLOCK标志
+            auto newConn = TcpConnection::makeHeapObject(connEvent, this, ownerEventLoop);
 #ifdef IDLE_CONNECTIONS_MANAGER
-        newConn->lastReceiveTime = timeInProcess;
-        wheelPolicy_.addNewConnection(newConn);
+            newConn->lastReceiveTime = timeInProcess;
+            wheelPolicy_.addNewConnection(newConn);
 #endif
 
-        auto bindCallback = [this, newConn]() {
-            this->preConnMsgCallback(newConn);
-        };
-        connEvent->setReadCallback(bindCallback);
-        connEvent->setReadable(true);
-        // 回调EstablishedCallback()
-        if (connEstaCallback_)
-            connEstaCallback_(newConn);
+            auto bindCallback = [this, newConn]() {
+                this->preConnMsgCallback(newConn);
+            };
+            connEvent->setReadCallback(bindCallback);
+            connEvent->setReadable(true);
+            // 回调EstablishedCallback()
+            if (connEstaCallback_)
+                connEstaCallback_(newConn);
+        } while (true);
     }
 
     // todo 对connections_的insert和erase操作都应该由mainThread来完成，参考muduo runInLoop.
-    void closeConnection(TcpConnection *connection, std::function<void(TcpConnection*)> destoryCallback) override {
+    void closeConnection(TcpConnection *connection, std::function<void(TcpConnection *)> destoryCallback) override {
         assert(destoryCallback == nullptr);
         // fixed: 确保数据被发送
         if (connection->writeBuffer().readableBytes() > 0) {
@@ -198,7 +201,9 @@ private:
 
         // todo 释放connection资源，由wheeling来（定时而非及时）释放资源哈哈
 #ifndef IDLE_CONNECTIONS_MANAGER
-        delete connection;
+        //delete connection;
+        // todo change delete to recovery
+        ObjectPool::returnObject<TcpConnection>(connection);
 #endif
     }
 

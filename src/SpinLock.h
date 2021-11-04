@@ -26,21 +26,6 @@ public:
             } while (lock_.load() == LOCKED);
         }
         assert(lock_.load() == LOCKED);
-////        // for test
-//        if (state == 0) {
-//            id1 = std::this_thread::get_id();
-//            state = 1;
-//        }
-//        else if (state == 1) {
-//            if (id1 != std::this_thread::get_id()) {
-//                id2 = std::this_thread::get_id();
-//                std::cout << id1 << " " << id2 << std::endl;
-//                state = 2;
-//            }
-//        } else if (id1 != std::this_thread::get_id() || id2 != std::this_thread::get_id()) {
-//            std::cout << id1 << " " << id2 << std::endl;
-//            assert(0);
-//        }
     }
 
     std::atomic<int> state = 0;

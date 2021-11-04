@@ -14,6 +14,7 @@
 #include <atomic>
 
 class EventLoop;
+using MutexLock = std::mutex;
 
 class EventLoop {
 public:
@@ -32,8 +33,7 @@ public:
             isInTaskHanding_ = true;
             // create tmp + swap with lock
             std::vector<std::function<void()>> curTask;
-
-            std::unique_lock<SpinLock> lg(lock_);
+            std::unique_lock<MutexLock> lg(lock_);
             curTask.swap(tasks_);
             assert(tasks_.empty());
             lg.unlock();
@@ -67,7 +67,7 @@ public:
     void runInLoop(std::function<void()> task) {
         // runInLoop 目前还不需要加锁，因为只有main thread会每一秒调用一次该函数
         {
-            std::lock_guard<SpinLock> lg(lock_);
+            std::lock_guard<MutexLock> lg(lock_);
             tasks_.push_back(std::move(task));
         }
         // 打断eopller.poll()，否则在没有新事件到来时，这些task将饥饿
@@ -82,7 +82,7 @@ private:
     std::vector<std::function<void()>> tasks_;
     int wakeUpFd_; // 在runInLoop添加新任务后唤醒epoller_
     std::atomic<bool> isInTaskHanding_; // 如果已经在处理tasks，那么就不需要冗余地唤醒epoller_
-    SpinLock lock_;
+    MutexLock lock_;
     bool looping_;
 };
 
