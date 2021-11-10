@@ -18,6 +18,16 @@ extern uint64_t recoveryConnNums;
 extern std::vector<char *> blocks;
 void release();
 
+class ReleaseGuard {
+public:
+    ~ReleaseGuard() {
+        release();
+    }
+    static ReleaseGuard guard;
+};
+
+static ReleaseGuard guard;
+
 class ObjectPool {
 public:
     template<typename T>

@@ -5,7 +5,9 @@
 
 目前支持Linux平台和TCP/IPv4协议。
 
-todo 框架图
+### 架构图
+![](../../../Desktop/Dagger架构图.png)
+
 ### Benchmark
 todo
 
@@ -26,5 +28,5 @@ make
 - 增加UDP支持
 - 增加DNS支持
 - 增加openssl支持
-- 实现chat、webbench、broadcast、rpc等使用场景样例
+- 实现chat、broadcast、rpc等使用场景样例
 - 优化性能

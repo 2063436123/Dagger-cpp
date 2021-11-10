@@ -56,7 +56,7 @@ public:
         assert(writableBytes() >= maxBytes);
         ssize_t n = ::read(connfd, &vec_[writeIndex_], maxBytes);
         if (n < 0) {
-            if (errno != EINTR) {
+            if (errno != EINTR && errno != EWOULDBLOCK) {
                 Logger::sys("read from socket error");
                 return n;
             }
