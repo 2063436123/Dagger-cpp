@@ -14,20 +14,15 @@
 #include "Logger.h"
 
 class InAddr {
+#define getIp(ip_port) ip_port.substr(0, ip_port.find_first_of(':'))
+#define getPort(ip_port) ip_port.substr(ip_port.find_first_of(':') + 1)
 public:
-    InAddr(const std::string &sin_port, const std::string &sin_addr = "0.0.0.0", sa_family_t sa_family = AF_INET)
-            : InAddr(sin_port.c_str(), sin_addr.c_str(), sa_family) {}
-
-    InAddr(const char *sin_port, const char *sin_addr = "0.0.0.0", sa_family_t sa_family = AF_INET) {
-        in_addr addr;
-        in_port_t portNum = atoi(sin_port);
-        assert(portNum != 0); // 说明sin_port不是有效的数字 或者 就是0，但0也不应该被设置为端口.
-
-        inet_pton(sa_family, sin_addr, &addr);
-        in_port_t port = htons(portNum);
-
-        initAddr(port, addr, sa_family);
+    InAddr(const std::string &sin_port, const std::string &sin_addr, sa_family_t sa_family = AF_INET) {
+        init(sin_port.c_str(), sin_addr.c_str(), sa_family);
     }
+
+    InAddr(const std::string &ip_port, sa_family_t sa_family = AF_INET) : InAddr(getPort(ip_port), getIp(ip_port),
+                                                                                 sa_family) {}
 
     // 注意，此构造函数的sin_port和sin_addr要求是网络字节序（大端）
     InAddr(in_port_t sin_port, in_addr sin_addr = in_addr{.s_addr = INADDR_ANY},
@@ -47,6 +42,17 @@ public:
     }
 
 private:
+    void init(const char *sin_port, const char *sin_addr, sa_family_t sa_family = AF_INET) {
+        in_addr addr;
+        in_port_t portNum = atoi(sin_port);
+        assert(portNum != 0); // 说明sin_port不是有效的数字 或者 就是0，但0也不应该被设置为端口.
+
+        inet_pton(sa_family, sin_addr, &addr);
+        in_port_t port = htons(portNum);
+
+        initAddr(port, addr, sa_family);
+    }
+
     void initAddr(in_port_t sin_port, in_addr sin_addr, sa_family_t sa_family) {
         bzero(&addr_, sizeof(addr_));
         addr_.sa_family = sa_family;

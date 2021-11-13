@@ -17,7 +17,7 @@ void whenMsgArrived(TcpConnection *connection) {
     buf.retrieveAll();
 }
 
-int N = 16 * 1024;
+int N = 4 * 1024;
 
 void taskPerSecond() {
     ++i;
@@ -38,11 +38,9 @@ int main(int argc, char **argv) {
     else
         client.addWorkerThreads(3);
 
-    if (argc > 3)
-        N = atoi(argv[3]);
     std::string msg(N, ' ');
 
-    int connectionNums = (argc > 2) ? atoi(argv[2]) : 100;
+    int connectionNums = (argc > 2) ? atoi(argv[2]) : 1;
     for (int i = 0; i < connectionNums; i++) {
         auto conn = client.connect(InAddr("12345", "127.0.0.1"));
         conn->send(msg.c_str(), msg.size());

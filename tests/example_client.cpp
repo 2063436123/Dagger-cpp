@@ -27,7 +27,7 @@ void whenConnClose(TcpConnection *connection) {
 
 int main() {
     EventLoop loop;
-    TcpClient client(Socket::makeNewSocket(), &loop, Codec(Codec::UNLIMITED_MODEL, 0));
+    TcpClient client(&loop, Codec(Codec::UNLIMITED_MODEL, 0));
     client.setConnMsgCallback(whenMsgArrived);
     client.setConnCloseCallback(whenConnClose);
     client.setConnErrorCallback(whenErrorOccur);

@@ -50,7 +50,7 @@ int main() {
 
     auto s = Socket::makeNewSocket();
     EventLoop loop;
-    TcpServer server(std::move(s), InAddr("12345"), &loop,
+    TcpServer server(std::move(s), InAddr("12345", "0.0.0.0"), &loop,
                      Codec(Codec::UNLIMITED_MODEL, 0));
 
     // 添加事件回调
