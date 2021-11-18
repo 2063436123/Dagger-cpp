@@ -28,6 +28,12 @@ ObjectPool &getObjectPool();
 
 const int REAL_SECONDS_PER_VIRTUAL_SECOND = 1;
 
+#include <csignal>
+static void handler(int sig) {}
+static void shield_sigpipe() {
+    signal(SIGPIPE, handler);
+}
+
 // 单线程TcpServer
 class TcpServer : public TcpSource {
     friend class TcpConnection;
@@ -38,6 +44,7 @@ public:
     // C++ Primer P478: 因为listenfd 是一个非引用参数，所以对它进行拷贝初始化 -> 左值使用拷贝构造函数，右值使用移动构造函数
     TcpServer(Socket listenfd, InAddr addr, EventLoop *loop, Codec codec) : listenfd_(std::move(listenfd)), loop_(loop),
                                                                             pool_(loop), codec_(std::move(codec)) {
+        shield_sigpipe();
         // for performance
         if (Options::setMaxFiles(1048576) < 0)
             Logger::sys("getMaxFiles error");

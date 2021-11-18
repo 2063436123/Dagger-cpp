@@ -71,7 +71,7 @@ public:
     }
 
 private:
-    void readField(char *&ptr, char ch = ' ') {
+    static void readField(char *&ptr, char ch = ' ') {
         while (*ptr != ch)
             ++ptr;
         *ptr++ = '\0';
@@ -79,7 +79,7 @@ private:
             ++ptr;
     }
 
-    void readLastField(char *&ptr) {
+    static void readLastField(char *&ptr) {
         while (*ptr != '\r' && *ptr != ' ')
             ++ptr;
         *ptr++ = '\0';
@@ -123,7 +123,7 @@ private:
         //             httpMetaData.headers[1].first, httpMetaData.headers[1].second);
 
         std::string response("blank");
-        // do work
+        // thread safe, 只要保证只在程序开始时设置好services_即可
         auto ret = services_.find(httpMetaData.url);
         if (ret != services_.end()) {
             ret->second.operator()(conn);
@@ -182,5 +182,3 @@ private:
 };
 
 #endif //TESTLINUX_HTTPSERVER_H
-
-#pragma clang diagnostic pop

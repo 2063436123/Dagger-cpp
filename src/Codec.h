@@ -2,7 +2,7 @@
 // Created by Hello Peter on 2021/10/29.
 //
 
-#ifndef TESTLINUX_CODEC_H
+#ifndef TESTLINUX_MESSAGECODEC_H
 #define TESTLINUX_CODEC_H
 
 #include <utility>

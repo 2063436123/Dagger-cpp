@@ -23,7 +23,8 @@ public:
         if (threads_.empty())
             return single_loop_;
         // 大致公平的算法
-        return &loops_[nextIndex_++ % realSize_];
+        size_t nextIndex = nextIndex_++ % realSize_;
+        return &loops_[nextIndex];
     }
 
     void threadFunc(int i) {
