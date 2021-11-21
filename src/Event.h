@@ -27,6 +27,10 @@ public:
 
     int fd() const { return fd_; }
 
+    Epoller* epoller() {
+        return epoller_;
+    }
+
     int events() const { return events_; }
 
     void setEvents(int events) { events_ = events; }

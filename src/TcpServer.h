@@ -10,6 +10,7 @@
 #include <map>
 #include <sys/timerfd.h>
 #include "Codec.h"
+#include "Timer.h"
 #include "Buffer.h"
 #include "Socket.h"
 #include "Event.h"
@@ -29,9 +30,11 @@ ObjectPool &getObjectPool();
 const int REAL_SECONDS_PER_VIRTUAL_SECOND = 1;
 
 #include <csignal>
-static void handler(int sig) {}
+static void sigpipe_handler(int sig) {
+    assert(sig == SIGPIPE);
+}
 static void shield_sigpipe() {
-    signal(SIGPIPE, handler);
+    signal(SIGPIPE, sigpipe_handler);
 }
 
 // 单线程TcpServer
@@ -43,7 +46,8 @@ public:
     // 此处可用Socket或Socket&&来接受右值.
     // C++ Primer P478: 因为listenfd 是一个非引用参数，所以对它进行拷贝初始化 -> 左值使用拷贝构造函数，右值使用移动构造函数
     TcpServer(Socket listenfd, InAddr addr, EventLoop *loop, Codec codec) : listenfd_(std::move(listenfd)), loop_(loop),
-                                                                            pool_(loop), codec_(std::move(codec)) {
+                                                                            pool_(loop), codec_(std::move(codec)),
+                                                                            timer_(loop) {
         shield_sigpipe();
         // for performance
         if (Options::setMaxFiles(1048576) < 0)
@@ -80,23 +84,17 @@ public:
     }
 
     // 单位是ms
-    void addTimedTask(uint32_t nextOccurTime, uint32_t intervalTime, std::function<void()> task) {
-        timespec nxtTime{.tv_sec = nextOccurTime / 1000, .tv_nsec = (nextOccurTime % 1000) * 1000000};
-        timespec interTime{.tv_sec = intervalTime / 1000, .tv_nsec = (intervalTime % 1000) * 1000000};
-        struct itimerspec spec{.it_interval = interTime, .it_value = nxtTime};
-        int timerfd = timerfd_create(CLOCK_MONOTONIC, 0);
-        if (timerfd_settime(timerfd, 0, &spec, nullptr) < 0)
-            Logger::sys("timerfd_settime error");
+    TimerHandler addOneTask(uint32_t time, const std::function<void()>& task) {
+        return timer_.addOneTask(time, task);
+    }
 
-        // fixme 内存泄漏，timerEvent
-        auto timerEvent = Event::make(timerfd, loop_->epoller());
-        auto readCallback = [timerfd = timerfd, task]() {
-            uint64_t tmp;
-            read(timerfd, &tmp, sizeof(tmp));
-            task();
-        };
-        timerEvent->setReadCallback(readCallback);
-        timerEvent->setReadable(true);
+    // 单位是ms
+    TimerHandler addTimedTask(uint32_t firstTime, uint32_t intervalTime, const std::function<void()>& task) {
+        return timer_.addTimedTask(firstTime, intervalTime, task);
+    }
+
+    void cancelTimer(TimerHandler handler) {
+        handler.cancelTimer();
     }
 
     // 启动EventLoop，开始监听listenfd和其他事件
@@ -220,6 +218,7 @@ private:
     EventLoop *loop_; // for listenfd
     EventLoopPool pool_;
     Codec codec_;
+    Timer timer_;
 #ifdef IDLE_CONNECTIONS_MANAGER
     TimerWheelingPolicy wheelPolicy_; // 提供一种策略，tcpserver每秒调用一次该策略来删除某些超时连接
 #endif

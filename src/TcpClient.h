@@ -22,8 +22,12 @@ class TcpClient : public TcpSource {
 public:
     // 一个实例对应一个客户
     TcpClient(EventLoop *loop, Codec codec) : loop_(loop),
-                                                               codec_(std::move(codec)), pool_(loop) {
+                                              codec_(std::move(codec)), pool_(loop) {
         loop_->init();
+    }
+
+    void setConnEstaCallback(std::function<void(TcpConnection *)> callback) {
+        connEstaCallback_ = callback;
     }
 
     void setConnMsgCallback(std::function<void(TcpConnection *)> callback) {
@@ -44,12 +48,11 @@ public:
 
     TcpConnection *connect(InAddr addr) {
         clients_.push_back(Socket::makeNewSocket());
-        auto& clientfd = clients_.back();
-        // todo 暂时用阻塞式connect连接
+        auto &clientfd = clients_.back();
         clientfd.setNonblock();
         clientfd.connect(addr);
 
-        EventLoop* loop = pool_.getNextPool();
+        EventLoop *loop = pool_.getNextPool();
         auto event = Event::make(clientfd.fd(), loop->epoller());
         auto conn = TcpConnection::makeHeapObject(event, this, loop);
         auto preConnMsgCallback = [conn, this]() {
@@ -71,6 +74,19 @@ public:
         };
         event->setReadCallback(preConnMsgCallback);
         event->setReadable(true);
+
+        event->setWriteCallback([this, conn]() {
+            // todo 判断是否连接成功，成功则触发connEsta回调
+            if (conn->socket().checkHasError()) {
+                // 连接失败
+                closeConnection(conn, nullptr);
+            } else {
+                if (connEstaCallback_)
+                    connEstaCallback_(conn);
+                conn->event()->setWritable(false);
+            }
+        });
+        event->setWritable(true);
 
         return conn;
     }
@@ -127,7 +143,7 @@ private:
     EventLoop *loop_;
     EventLoopPool pool_;
     Codec codec_;
-    std::function<void(TcpConnection *)> connMsgCallback_, connCloseCallback_, connErrorCallback_;
+    std::function<void(TcpConnection *)> connEstaCallback_, connMsgCallback_, connCloseCallback_, connErrorCallback_;
 };
 
 #endif //TESTLINUX_TCPCLIENT_H

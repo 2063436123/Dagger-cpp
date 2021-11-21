@@ -73,6 +73,8 @@ public:
 
     void resetClose();
 
+    bool checkHasError();
+
 private:
     int sockfd_;
 };

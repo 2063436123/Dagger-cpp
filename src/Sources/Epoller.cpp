@@ -38,7 +38,7 @@ void Epoller::addEvent(Event *event) {
             .data = epoll_data_t{.ptr = event}};
     int ret = epoll_ctl(epollfd_, EPOLL_CTL_ADD, event->fd(), &ev);
     if (ret < 0)
-        Logger::sys("epoll_ctl error");
+        Logger::sys("in addEvent, epoll_ctl error");
 }
 
 void Epoller::updateEvent(Event *event) {
@@ -50,7 +50,7 @@ void Epoller::updateEvent(Event *event) {
             .data = epoll_data_t{.ptr = event}};
     int ret = epoll_ctl(epollfd_, EPOLL_CTL_MOD, event->fd(), &ev);
     if (ret < 0)
-        Logger::sys("epoll_ctl error.");
+        Logger::sys("in updateEvent, epoll_ctl error. {}", event->fd());
 }
 
 void Epoller::removeEvent(Event *event) {

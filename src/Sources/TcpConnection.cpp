@@ -8,7 +8,7 @@
 #include "../TcpServer.h"
 
 
-TcpConnection::TcpConnection(Event *event, TcpSource *tcpSource, EventLoop *loop) : event_(event),
+TcpConnection::TcpConnection(Event *event, TcpSource *tcpSource, EventLoop *loop) : data_(nullptr), event_(event),
                                                                                     socket_(Socket::makeConnected(
                                                                                             event_->fd())),
                                                                                     state_(ESTABLISHED),

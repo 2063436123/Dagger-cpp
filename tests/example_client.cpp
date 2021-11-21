@@ -4,6 +4,10 @@
 
 #include "../src/TcpClient.h"
 
+void whenEsta(TcpConnection *connection) {
+    std::cout << "established!" << std::endl;
+}
+
 void whenMsgArrived(TcpConnection *connection) {
     // fixed: 之前用的是auto&，这导致修改的是buf的副本，retrieveAll()没有生效
     auto& buf = connection->readBuffer();
@@ -12,7 +16,8 @@ void whenMsgArrived(TcpConnection *connection) {
 
     // BUG: 如果在等待用户输入的过程中，此连接被对端关闭，那么connection对象将会被自动delete，
     // 导致后面的connection->send中的段错误
-    connection->send(buf.peek(), buf.readableBytes());
+    //connection->send(buf.peek(), buf.readableBytes());
+    std::cout << "echo: " << std::string(buf.peek(), buf.readableBytes()) << std::endl;
     buf.retrieveAll();
 }
 
@@ -28,10 +33,13 @@ void whenConnClose(TcpConnection *connection) {
 int main() {
     EventLoop loop;
     TcpClient client(&loop, Codec(Codec::UNLIMITED_MODEL, 0));
+
+    client.setConnEstaCallback(whenEsta);
     client.setConnMsgCallback(whenMsgArrived);
     client.setConnCloseCallback(whenConnClose);
     client.setConnErrorCallback(whenErrorOccur);
 
+    client.addWorkerThreads(1);
     auto conn = client.connect(InAddr("12345", "127.0.0.1"));
 
     std::string msg;

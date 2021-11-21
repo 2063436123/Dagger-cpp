@@ -111,6 +111,14 @@ void Socket::setQuickAck() {
         Logger::sys("setsockopt error");
 }
 
+bool Socket::checkHasError() {
+    int error;
+    socklen_t len = sizeof(error);
+    if (::getsockopt(sockfd_, SOL_SOCKET, SO_ERROR, &error, &len) < 0)
+        Logger::sys("setsockopt error");
+    return error != 0;
+}
+
 //int main() {
 //    Socket socket1 = Socket::make();
 //    socket1.setReuseAddr();

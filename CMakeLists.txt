@@ -12,7 +12,8 @@ set(SRCS src/Sources/Socket.cpp
         src/Sources/EventLoop.cpp
         src/Sources/Logger.cpp
         third_party/fmt_src/os.cc third_party/fmt_src/format.cc
-        src/Sources/TcpServer.cpp src/Sources/ObjectPool.cpp)
+        src/Sources/TcpServer.cpp src/Sources/ObjectPool.cpp
+        src/Sources/Timer.cpp)
 
 # tcp_server test
 add_executable(example_server tests/example_server.cpp ${SRCS})
@@ -43,6 +44,9 @@ add_executable(spinLock_test tests/spinLock_test.cpp)
 
 # objectPool test
 add_executable(objectPool_test tests/objectPool_test.cpp ${SRCS})
+
+#timer test
+add_executable(timer_test tests/timer_test.cpp ${SRCS})
 
 # ssl
 add_executable(ssl_client examples/secure-socket/ssl_client.cpp ${SRCS})

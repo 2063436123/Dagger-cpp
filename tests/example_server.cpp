@@ -27,7 +27,7 @@ void whenMsgArrived(TcpConnection *conn) {
     buf.retrieveAll();
     conn->send(response_str.c_str(), response_str.size());
     // 如果不开启IDLE_CONNECTIONS_MANAGER，那么要么等待对端主动关闭（可能无限等待），要么在这里主动关闭。
-    conn->activeClose();
+    //conn->activeClose();
 //    conn->socket().resetClose();
 }
 

@@ -2,7 +2,7 @@
 // Created by Hello Peter on 2021/10/29.
 //
 
-#ifndef TESTLINUX_MESSAGECODEC_H
+#ifndef TESTLINUX_CODEC_H
 #define TESTLINUX_CODEC_H
 
 #include <utility>
@@ -18,7 +18,7 @@ public:
 
     explicit Codec(std::function<bool(TcpConnection *)> cb) : cb_(std::move(cb)) {}
 
-    Codec(MODEL model, DataType data) {
+    explicit Codec(MODEL model = UNLIMITED_MODEL, DataType data = 0) {
         if (model == HTTP_MODEL) {
             cb_ = [data](TcpConnection *conn) { return http_request_default_callback(conn, data); };
         } else if (model == LENGTH_DATA_MODEL) {
