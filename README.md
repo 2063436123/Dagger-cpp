@@ -6,7 +6,7 @@
 目前支持Linux平台和TCP/IPv4协议。
 
 ### 架构图
-![](../../../Desktop/Dagger架构图.png)
+![](docs/architecture.png)
 
 ### Benchmark
 [here](docs/benchmark.md)
