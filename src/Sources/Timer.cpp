@@ -64,6 +64,9 @@ void TimerHandler::resetOneTask(uint32_t time) {
 }
 
 void TimerHandler::cancelTimer() {
+    // 默认初始化或被cancel的TimerHandler是无效的
+    if (timerfd_ == 0)
+        return;
     timespec nxtTime{.tv_sec = 0, .tv_nsec = 0};
     timespec interTime{.tv_sec = 0, .tv_nsec = 0};
     struct itimerspec spec{.it_interval = interTime, .it_value = nxtTime};
@@ -73,4 +76,5 @@ void TimerHandler::cancelTimer() {
     // 销毁timerfd
     event_->epoller()->removeEvent(event_);
     close(timerfd_);
+    this->timerfd_ = 0;
 }

@@ -27,11 +27,15 @@ public:
     uint32_t lastReceiveTime{};
 
     enum State {
-        BLANK, ESTABLISHED, CLOSED
+        BLANK, ESTABLISHED, WILL_CLOSED, CLOSED
     };
 
     State state() {
         return state_;
+    }
+
+    void setState(State state) {
+        state_ = state;
     }
 
     static TcpConnection make(Event *event, TcpSource *tcpSource, EventLoop *loop) {
@@ -67,6 +71,7 @@ public:
         writeBuffer_.append(str, len);
         send();
     }
+
 
     // 确保非阻塞地及时发送writeBuffer_中所有值
     void send(bool isLast = false);
@@ -110,7 +115,7 @@ private:
     void *data_ = nullptr;
     Event* event_; // 当前连接对应的epoller中的event，todo 记得delete
     Socket socket_;
-    bool isWillClose_;
+    bool isWillClose_; // todo 使用state_代替之
     std::function<void(TcpConnection*)>destoryCallback_; // only for FreeServerClient
     State state_;
     // 保存Tcpserver的引用是为了调用tcpServer_->closeConnection

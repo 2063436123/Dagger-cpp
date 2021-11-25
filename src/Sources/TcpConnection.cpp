@@ -3,8 +3,6 @@
 //
 
 #include "../TcpConnection.h"
-
-#include <utility>
 #include "../TcpServer.h"
 
 
@@ -37,9 +35,11 @@ void TcpConnection::sendNonblock() {
 }
 
 void TcpConnection::send(bool isLast) {
+    if (state() == BLANK)
+        sleep(2); // for client: 等待连接建立, todo 使用cv
     assert(writeBuffer_.readableBytes() > 0);
     isWillClose_ = isLast;
-    if (event_->isWritable())
+    if (event_->isWritable()) // fixed 竞态条件：因为异步connect注册了一个可写回调来检查connect是否成功，那么在connect结果返回前将不能调用send.
         return;
     event_->setWritable(true);
     event_->setWriteCallback([this] { sendNonblock(); });

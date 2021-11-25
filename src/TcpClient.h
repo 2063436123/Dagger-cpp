@@ -55,6 +55,10 @@ public:
         EventLoop *loop = pool_.getNextPool();
         auto event = Event::make(clientfd.fd(), loop->epoller());
         auto conn = TcpConnection::makeHeapObject(event, this, loop);
+        // 默认TcpConnection返回时的state为ESTABLISHED，但这只有在server方是正确的，因为一旦accept返回一定有新链接建立，
+        // 而对于TcpClient来说，此时可能正在connect，所以用BLANK表示.
+        conn->setState(TcpConnection::BLANK);
+
         auto preConnMsgCallback = [conn, this]() {
             ssize_t n = conn->readBuffer().readFromSocket(conn->socket());
             if (n == 0) {
@@ -81,9 +85,11 @@ public:
                 // 连接失败
                 closeConnection(conn, nullptr);
             } else {
+                std::cout << "连接成功建立！" << std::endl;
                 if (connEstaCallback_)
                     connEstaCallback_(conn);
                 conn->event()->setWritable(false);
+                conn->setState(TcpConnection::ESTABLISHED);
             }
         });
         event->setWritable(true);
