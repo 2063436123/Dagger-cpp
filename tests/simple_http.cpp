@@ -13,7 +13,7 @@ int main() {
     ObjectPool::addObjectCache<TcpConnection>(10000);
     ObjectPool::addObjectCache<Event>(10000);
 
-    HttpServer server(InAddr("0.0.0.0:15558"));
+    RtspServer server(InAddr("0.0.0.0:15558"));
     server.addServiceHandler("/port", [](TcpConnection *conn) {
         HttpResponse response;
         response.addBody("15558");

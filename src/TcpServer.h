@@ -37,6 +37,7 @@ static void shield_sigpipe() {
     signal(SIGPIPE, sigpipe_handler);
 }
 
+extern thread_local EventLoop *localEventLoop;
 // 单线程TcpServer
 class TcpServer : public TcpSource {
     friend class TcpConnection;
@@ -84,12 +85,12 @@ public:
     }
 
     // 单位是ms
-    TimerHandler addOneTask(uint32_t time, const std::function<void()>& task) {
+    std::shared_ptr<TimerHandler> addOneTask(uint32_t time, const std::function<void()>& task) {
         return timer_.addOneTask(time, task);
     }
 
     // 单位是ms
-    TimerHandler addTimedTask(uint32_t firstTime, uint32_t intervalTime, const std::function<void()>& task) {
+    std::shared_ptr<TimerHandler> addTimedTask(uint32_t firstTime, uint32_t intervalTime, const std::function<void()>& task) {
         return timer_.addTimedTask(firstTime, intervalTime, task);
     }
 
@@ -140,6 +141,7 @@ private:
     // socket -> buffer(writable)
     // buffer(readable) -> user
     void preConnMsgCallback(TcpConnection *connection) {
+        connection->setData(localEventLoop); // fixme 验证closeConnection和preConnMsgCallback被同一个线程调用
         // 本函数应该：读取socket上数据到buffer，如果为0调用destroy()函数释放连接资源
         // 否则将buffer等作为参数，回调用户的readCallback.
         ssize_t n = connection->readBuffer().readFromSocket(connection->socket());
@@ -191,6 +193,7 @@ private:
 
     // todo 对connections_的insert和erase操作都应该由mainThread来完成，参考muduo runInLoop.
     void closeConnection(TcpConnection *connection, std::function<void(TcpConnection *)> destoryCallback) override {
+        assert (connection->data() == localEventLoop); // fixme 验证closeConnection和preConnMsgCallback被同一个线程调用
         assert(destoryCallback == nullptr);
         // fixed: 确保数据被发送
         if (connection->writeBuffer().readableBytes() > 0) {

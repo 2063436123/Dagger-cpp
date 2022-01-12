@@ -5,7 +5,7 @@
 #include "../src/FreeServerClient.h"
 
 void whenConnEsta(TcpConnection* conn) {
-    Logger::info("new conn{}\n", conn->socket().fd());
+    Logger::info("new conn_{}\n", conn->socket().fd());
 }
 
 void whenMsgArrived(TcpConnection* conn) {
@@ -14,7 +14,7 @@ void whenMsgArrived(TcpConnection* conn) {
 }
 
 void whenConnClose(TcpConnection* conn) {
-    Logger::info("conn{} closed.\n", conn->socket().fd());
+    Logger::info("conn_{} closed.\n", conn->socket().fd());
 }
 
 int main() {

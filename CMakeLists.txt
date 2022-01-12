@@ -4,7 +4,7 @@ project(testLinux)
 set(CMAKE_CXX_STANDARD 20)
 
 link_libraries(pthread gtest)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Og")
 include_directories(third_party/fmt_include)
 
 set(SRCS src/Sources/Socket.cpp
@@ -60,3 +60,6 @@ add_executable(asio_multi_server examples/asio/asio_multi_server.cpp)
 
 # http
 add_executable(http_server tests/simple_http.cpp ${SRCS})
+
+# rtsp
+add_executable(rtsp_server examples/RTSP/rtspServerTest.cpp examples/RTSP/rtspServer.cpp ${SRCS})

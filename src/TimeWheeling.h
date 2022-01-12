@@ -32,7 +32,7 @@ public:
                 int now = timeInProcess;
                 if (now - conn->lastReceiveTime > MAX_IDLE_SECONDS) {
                     // 1. 空闲
-                    Logger::info("conn destroy because of timeout, connfd = {}, lastReceiveTime = {}, now = {}\n",
+                    Logger::info("conn_ destroy because of timeout, connfd = {}, lastReceiveTime = {}, now = {}\n",
                                  conn->socket().fd(), conn->lastReceiveTime, timeInProcess);
                     conn->eventLoop()->runInLoop(std::bind(&TimerWheelingPolicy::destoryThenDeleteConn, this, conn));
                 }

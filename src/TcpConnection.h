@@ -9,6 +9,7 @@
 
 #include "Buffer.h"
 #include "Event.h"
+#include "Timer.h"
 #include "Epoller.h"
 #include "EventLoop.h"
 #include "TcpSource.h"
@@ -84,6 +85,16 @@ public:
         return socket_;
     }
 
+    // 单位是ms
+    std::shared_ptr<TimerHandler> addOneTask(uint32_t time, const std::function<void()>& task) {
+        return timer_.addOneTask(time, task);
+    }
+
+    // 单位是ms
+    std::shared_ptr<TimerHandler> addTimedTask(uint32_t firstTime, uint32_t intervalTime, const std::function<void()>& task) {
+        return timer_.addTimedTask(firstTime, intervalTime, task);
+    }
+
     EventLoop *eventLoop() {
         return loop_;
     }
@@ -122,6 +133,7 @@ private:
     TcpSource *tcpSource_;
     // 保存EventLoop的引用是为了调用loop_->epoller()或指明谁在控制此连接
     EventLoop *loop_;
+    Timer timer_;
 };
 
 

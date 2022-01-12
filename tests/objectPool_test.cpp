@@ -19,12 +19,12 @@ TEST(ObjectPoolTest, Basic) {
     string* str1 = ObjectPool::getNewObject<std::string>("hello");
     string* str2 = ObjectPool::getNewObject<std::string>("world");
     ObjectPool::addObjectCache<std::string>(1);
-    string* str3 = ObjectPool::getNewObject<std::string>("ff");
+    string* str3 = ObjectPool::getNewObject<std::string>("unit_amount");
     EXPECT_NE(str1, str2);
     EXPECT_NE(str1, str3);
     EXPECT_EQ(*str1, std::string("hello"));
     EXPECT_EQ(*str2, std::string("world"));
-    EXPECT_EQ(*str3, std::string("ff"));
+    EXPECT_EQ(*str3, std::string("unit_amount"));
 }
 
 TEST(ObjectPoolTest, Class) {

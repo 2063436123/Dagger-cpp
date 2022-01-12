@@ -12,7 +12,7 @@ TcpConnection::TcpConnection(Event *event, TcpSource *tcpSource, EventLoop *loop
                                                                                     state_(ESTABLISHED),
                                                                                     isWillClose_(false),
                                                                                     tcpSource_(tcpSource),
-                                                                                    loop_(loop) {
+                                                                                    loop_(loop), timer_(loop_) {
     socket_.setNonblock();
     //socket_.setQuickAck();
     //socket_.setTcpNoDelay();

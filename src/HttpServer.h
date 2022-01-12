@@ -48,13 +48,13 @@ struct HttpResponse {
 
 };
 
-class HttpServer {
+class RtspServer {
 public:
     using serviceHandler = std::function<void(TcpConnection *)>;
 
-    explicit HttpServer(InAddr bindAddr) : codec_(Codec::HTTP_MODEL, 0),
+    explicit RtspServer(InAddr bindAddr) : codec_(Codec::HTTP_MODEL, 0),
                                            server_(Socket::makeNewSocket(), bindAddr, &loop_, codec_) {
-        server_.setConnMsgCallback([this](TcpConnection *conn) { this->handleHttpRequest(conn); });
+        server_.setConnMsgCallback([this](TcpConnection *conn) { this->handleRtspRequest(conn); });
     }
 
     void start(int workerNums = 0) {
@@ -66,7 +66,7 @@ public:
         services_[service_name] = std::move(handler);
     }
 
-    ~HttpServer() {
+    ~RtspServer() {
         server_.stop();
     }
 
@@ -90,7 +90,7 @@ private:
         ++ptr;
     }
 
-    void handleHttpRequest(TcpConnection *conn) {
+    void handleRtspRequest(TcpConnection *conn) {
         HttpRequest httpMetaData;
         // parse, rule in here: https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol#Request_syntax
         char *ptr = conn->readBuffer().peek();

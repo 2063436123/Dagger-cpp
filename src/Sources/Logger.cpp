@@ -87,7 +87,7 @@ void Logger::log(LogLevel level, const char *logline, size_t len) {
     *currentBuffer_ += msg;
 
     if (!isInCollectLog_)
-        cond_.notify_one();
+        cond_.notify_one(); // notify处不用加锁，因为wait处有时间限制
 }
 
 void Logger::backThread() {
@@ -133,6 +133,7 @@ void Logger::backThread() {
     for (auto &bufferPtr: buffers_)
         write(outputFd_, bufferPtr->c_str(), bufferPtr->size());
     fsync(outputFd_);
+    lock_guard<mutex> lg(mutex_);
     willCloseCond_.notify_one();
 }
 

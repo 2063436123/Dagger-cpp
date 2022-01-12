@@ -34,8 +34,10 @@ public:
         // 得益于epoll对并发的支持，single_loop_可以在某一Epoller阻塞时向其中添加新的监听事件。
 //        ul.unlock();
         loop.init();
+        std::unique_lock<std::mutex> ul(mu_);
         ++cnt;
         cv_.notify_one();
+        ul.unlock();
         loop.start();
     }
 
